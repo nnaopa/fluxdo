@@ -54,6 +54,37 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    // 显式根据构建目标过滤 ABI，防止 Cronet 等原生库引入不需要的架构
+    val targetPlatform = project.findProperty("target-platform") as? String
+    println("Target Platform: $targetPlatform")
+    if (targetPlatform != null) {
+        val targetAbi = when (targetPlatform) {
+            "android-arm" -> "armeabi-v7a"
+            "android-arm64" -> "arm64-v8a"
+            "android-x64" -> "x86_64"
+            else -> null
+        }
+
+        if (targetAbi != null) {
+            println("Configuring build for ABI: $targetAbi")
+            defaultConfig {
+                ndk {
+                    abiFilters.add(targetAbi)
+                }
+            }
+            
+            // 强制排除非目标架构的 so 文件 (针对 Cronet 等不服从 abiFilters 的库)
+            packaging {
+                jniLibs {
+                    val allAbis = listOf("armeabi-v7a", "arm64-v8a", "x86_64", "x86")
+                    allAbis.filter { it != targetAbi }.forEach { abi ->
+                        excludes.add("lib/$abi/**")
+                    }
+                }
+            }
+        }
+    }
 }
 
 flutter {

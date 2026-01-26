@@ -483,8 +483,12 @@ class PreloadedDataService {
   }
 
   void _decodeTopicListAsync(String rawJson) {
+    _topicListResponseCompleter ??= Completer<TopicListResponse?>();
     compute(_decodeTopicListInIsolate, rawJson).then((decoded) {
-      if (decoded == null) return;
+      if (decoded == null) {
+        _topicListResponseCompleter?.complete(null);
+        return;
+      }
       _topicListData = decoded;
       final topicsCount = (_topicListData?['topic_list']?['topics'] as List?)?.length ??
           (_topicListData?['topics'] as List?)?.length ??
@@ -493,15 +497,13 @@ class PreloadedDataService {
       _parseTopicListResponseAsync(decoded);
     }).catchError((e) {
       debugPrint('[PreloadedData] 异步解析 topic_list 失败: $e');
+      _topicListResponseCompleter?.complete(null);
     });
   }
 
   void _parseTopicListResponseAsync(Map<String, dynamic> data) {
-    if (_topicListResponseCompleter != null && !_topicListResponseCompleter!.isCompleted) {
-      return;
-    }
-    _topicListResponseCompleter = Completer<TopicListResponse?>();
-    SchedulerBinding.instance.scheduleTask(() {
+    _topicListResponseCompleter ??= Completer<TopicListResponse?>();
+    Future(() {
       try {
         _cachedTopicListResponse = TopicListResponse.fromJson(data);
         debugPrint('[PreloadedData] TopicListResponse 异步缓存成功');
@@ -510,7 +512,7 @@ class PreloadedDataService {
         debugPrint('[PreloadedData] 异步解析 TopicListResponse 失败: $e');
         _topicListResponseCompleter?.complete(null);
       }
-    }, Priority.idle, debugLabel: 'PreloadedDataService.parseTopicListResponse');
+    });
   }
 }
 
