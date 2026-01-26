@@ -162,7 +162,7 @@ class TopicScrollController extends ChangeNotifier {
     await scrollController.scrollToIndex(
       postIndex,
       preferPosition: AutoScrollPosition.begin,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 1),
     );
   }
 
@@ -257,6 +257,22 @@ class TopicScrollController extends ChangeNotifier {
   /// 清除跳转目标
   void clearJumpTarget() {
     _updateState(_state.copyWith(clearJumpTarget: true));
+  }
+
+  /// 检查帖子是否已渲染
+  bool isPostRendered(int postIndex) {
+    return scrollController.tagMap.containsKey(postIndex);
+  }
+
+  /// 本地跳转到帖子（不重新请求，仅重置视图中心）
+  void jumpToPostLocally(int postNumber, {int? anchorPostNumber}) {
+    _updateState(_state.copyWith(
+      hasInitialScrolled: false,
+      isPositioned: false,
+      jumpTargetPostNumber: postNumber,
+      initialCenterPostNumber: anchorPostNumber ?? postNumber,
+      currentPostNumber: postNumber,
+    ));
   }
 
   @override

@@ -97,6 +97,12 @@ class PostVisibilityTracker extends ChangeNotifier {
     return fallbackPostNumber ?? 1;
   }
 
+  /// 重置可变状态（用于跳转/刷新时清除旧的可见性数据）
+  void reset() {
+    _visiblePostNumbers.clear();
+    _screenTrackThrottleTimer?.cancel();
+  }
+
   @override
   void dispose() {
     _screenTrackThrottleTimer?.cancel();

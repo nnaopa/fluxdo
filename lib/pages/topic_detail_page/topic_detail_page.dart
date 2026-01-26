@@ -323,7 +323,34 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       return;
     }
 
-    await _scrollController.scrollToPost(postNumber, posts);
+    // 计算距离，如果距离过大直接使用本地跳转（即使已渲染）
+    bool forceLocalJump = false;
+    final stream = detail.postStream.stream;
+    final currentVisibleIndex = _visibilityTracker.currentVisibleStreamIndex;
+    
+    // 找到目标帖子的流索引
+    final targetPost = posts.firstWhere((p) => p.postNumber == postNumber, orElse: () => posts.first);
+    final targetStreamIndex = stream.indexOf(targetPost.id);
+
+    if (currentVisibleIndex != -1 && targetStreamIndex != -1) {
+      if ((targetStreamIndex - currentVisibleIndex).abs() > 15) {
+        forceLocalJump = true;
+      }
+    }
+
+    if (!forceLocalJump && _scrollController.isPostRendered(postIndex)) {
+      await _scrollController.scrollToPost(postNumber, posts);
+    } else {
+      // 如果目标帖子接近列表末尾（例如最后 20 个），
+      // 则将锚点设置在更前面的位置，以防止 centerKey 导致底部留白
+      int? anchorPostNumber;
+      if (posts.length - 1 - postIndex < 20) {
+        final safeIndex = (posts.length - 20).clamp(0, posts.length - 1);
+        anchorPostNumber = posts[safeIndex].postNumber;
+      }
+      _visibilityTracker.reset(); // 清除旧的可见性数据，防止“占位”导致进度条回跳
+      _scrollController.jumpToPostLocally(postNumber, anchorPostNumber: anchorPostNumber);
+    }
     _highlightController.triggerHighlight(postNumber);
   }
 
@@ -337,11 +364,35 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
 
     if (postIndex != -1) {
       final post = posts[postIndex];
-      await _scrollController.scrollController.scrollToIndex(
-        postIndex,
-        preferPosition: AutoScrollPosition.begin,
-        duration: const Duration(milliseconds: 200),
-      );
+      
+      // 同样应用距离检查
+      bool forceLocalJump = false;
+      final currentVisibleIndex = _visibilityTracker.currentVisibleStreamIndex;
+      final targetStreamIndex = detail.postStream.stream.indexOf(postId);
+      
+      if (currentVisibleIndex != -1 && targetStreamIndex != -1) {
+        if ((targetStreamIndex - currentVisibleIndex).abs() > 15) {
+          forceLocalJump = true;
+        }
+      }
+
+      if (!forceLocalJump && _scrollController.isPostRendered(postIndex)) {
+        await _scrollController.scrollController.scrollToIndex(
+          postIndex,
+          preferPosition: AutoScrollPosition.begin,
+          duration: const Duration(milliseconds: 1), // 瞬时跳转
+        );
+      } else {
+         // 锚点优化防止底部留白
+        int? anchorPostNumber;
+        if (posts.length - 1 - postIndex < 20) {
+          final safeIndex = (posts.length - 20).clamp(0, posts.length - 1);
+          anchorPostNumber = posts[safeIndex].postNumber;
+        }
+
+        _visibilityTracker.reset(); // 清除旧的可见性数据
+        _scrollController.jumpToPostLocally(post.postNumber, anchorPostNumber: anchorPostNumber);
+      }
       _highlightController.triggerHighlight(post.postNumber);
       return;
     }

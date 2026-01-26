@@ -614,6 +614,7 @@ class _PostItemState extends ConsumerState<PostItem> {
       },
       child: RepaintBoundary(
         child: Container(
+          constraints: const BoxConstraints(minHeight: 80),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: targetColor,
@@ -1591,12 +1592,9 @@ class _PostAvatar extends StatefulWidget {
   State<_PostAvatar> createState() => _PostAvatarState();
 }
 
-class _PostAvatarState extends State<_PostAvatar> with AutomaticKeepAliveClientMixin {
+class _PostAvatarState extends State<_PostAvatar> {
   late String _avatarUrl;
   ImageProvider? _cachedImageProvider;
-
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -1620,7 +1618,6 @@ class _PostAvatarState extends State<_PostAvatar> with AutomaticKeepAliveClientM
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // 必须调用以支持 AutomaticKeepAliveClientMixin
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
