@@ -1,3 +1,21 @@
+## v0.1.3
+
+- feat: add PreloadedDataService for efficient initial data loading and configure Android build with ABI filtering.
+
+- feat: implement topic detail page with scroll management, post display, and visibility tracking.
+
+- feat: Add Discourse HTML content rendering with custom builders for various elements, including quote cards.
+
+- feat: Implement Discourse poll rendering and voting, and configure Android build with signing and desugaring.
+
+- feat: add user profile page with login/logout, user settings, and initial Android build configuration.
+
+- feat: implement topic detail page with dynamic post loading, scrolling, and user activity tracking.
+
+- feat: Implement core Discourse API service and topic detail page, including authentication, network handling, and screen tracking.
+
+- feat: initialize Android build configuration and Flutter app entry point with service setup, theming, and localization.
+
 ## v0.1.2
 
 - feat: implement topic creation flow with floating action button, navigation, and list refresh.
