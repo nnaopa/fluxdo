@@ -4,6 +4,7 @@ import 'package:extended_image/extended_image.dart';
 import 'package:gal/gal.dart';
 import '../services/discourse_cache_manager.dart';
 import '../utils/double_tap_zoom_controller.dart';
+import 'package:share_plus/share_plus.dart';
 import '../widgets/common/loading_spinner.dart';
 
 class ImageViewerPage extends StatefulWidget {
@@ -12,6 +13,7 @@ class ImageViewerPage extends StatefulWidget {
   final String? heroTag;
   final List<String>? galleryImages;
   final int initialIndex;
+  final bool enableShare;
 
   const ImageViewerPage({
     super.key,
@@ -20,6 +22,7 @@ class ImageViewerPage extends StatefulWidget {
     this.heroTag,
     this.galleryImages,
     this.initialIndex = 0,
+    this.enableShare = false,
   }) : assert(imageUrl != null || imageBytes != null);
 
   /// 使用透明路由打开图片查看器
@@ -29,6 +32,7 @@ class ImageViewerPage extends StatefulWidget {
     String? heroTag,
     List<String>? galleryImages,
     int initialIndex = 0,
+    bool enableShare = false,
   }) {
     Navigator.push(
       context,
@@ -41,6 +45,7 @@ class ImageViewerPage extends StatefulWidget {
             heroTag: heroTag,
             galleryImages: galleryImages,
             initialIndex: initialIndex,
+            enableShare: enableShare,
           );
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -75,6 +80,7 @@ class _ImageViewerPageState extends State<ImageViewerPage>
     with TickerProviderStateMixin, DoubleTapZoomMixin {
   late int currentIndex;
   bool _isSaving = false;
+  bool _isSharing = false;
   final DiscourseCacheManager _cacheManager = DiscourseCacheManager();
 
   @override
@@ -206,6 +212,33 @@ class _ImageViewerPageState extends State<ImageViewerPage>
       }
     } catch (_) {}
     return 'jpg'; // 默认返回 jpg
+  }
+
+  /// 分享当前图片
+  Future<void> _shareImage() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+
+    try {
+      final imageUrl = _currentImageUrl;
+      // 获取缓存文件（如果不存在会自动下载）
+      final file = await _cacheManager.getSingleFile(imageUrl);
+      
+      // 分享文件
+      final xFile = XFile(file.path, mimeType: 'image/${_getExtensionFromUrl(imageUrl)}');
+      await Share.shareXFiles([xFile], text: imageUrl);
+    } catch (e) {
+      debugPrint('Share image error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('分享失败，请重试')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
+      }
+    }
   }
 
   @override
@@ -436,6 +469,32 @@ class _ImageViewerPageState extends State<ImageViewerPage>
                       ),
               ),
             ),
+
+            // Share button
+            if (widget.enableShare)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                left: 70, // 保存按钮右侧 (20 + 40 + 10)
+                child: CircleAvatar(
+                  backgroundColor: Colors.black.withValues(alpha: 0.5),
+                  child: _isSharing
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.share, color: Colors.white),
+                          onPressed: _shareImage,
+                        ),
+                ),
+              ),
           ],
         ),
       ),

@@ -199,6 +199,7 @@ class DiscourseWidgetFactory extends WidgetFactory {
                 heroTag: heroTag,
                 galleryImages: originalGalleryImages,
                 initialIndex: galleryIndex,
+                enableShare: true,
               );
             },
           );

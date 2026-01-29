@@ -247,6 +247,7 @@ class _DiscourseImageState extends State<DiscourseImage> {
       heroTag: widget.heroTag,
       galleryImages: widget.galleryImages.isNotEmpty ? widget.galleryImages : null,
       initialIndex: widget.initialIndex,
+      enableShare: true,
     );
   }
 

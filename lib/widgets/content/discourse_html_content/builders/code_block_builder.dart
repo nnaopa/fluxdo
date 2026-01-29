@@ -468,7 +468,7 @@ class _MermaidWidgetState extends State<_MermaidWidget> with SingleTickerProvide
                     ? GestureDetector(
                         onTap: () {
                           final hdUrl = _buildMermaidInkUrl(text, isDark, width: 2000);
-                          ImageViewerPage.open(context, hdUrl);
+                          ImageViewerPage.open(context, hdUrl, enableShare: true);
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(12),
