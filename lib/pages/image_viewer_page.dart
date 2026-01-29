@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:extended_image/extended_image.dart';
 import 'package:gal/gal.dart';
 import '../services/discourse_cache_manager.dart';
+import '../utils/double_tap_zoom_controller.dart';
 import '../widgets/common/loading_spinner.dart';
 
 class ImageViewerPage extends StatefulWidget {
@@ -70,7 +71,8 @@ class ImageViewerPage extends StatefulWidget {
   State<ImageViewerPage> createState() => _ImageViewerPageState();
 }
 
-class _ImageViewerPageState extends State<ImageViewerPage> {
+class _ImageViewerPageState extends State<ImageViewerPage>
+    with TickerProviderStateMixin, DoubleTapZoomMixin {
   late int currentIndex;
   bool _isSaving = false;
   final DiscourseCacheManager _cacheManager = DiscourseCacheManager();
@@ -79,8 +81,16 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
   void initState() {
     super.initState();
     currentIndex = widget.initialIndex;
+    // 初始化双击缩放
+    initDoubleTapZoom();
     // 预加载相邻图片
     _preloadAdjacentImages();
+  }
+
+  @override
+  void dispose() {
+    disposeDoubleTapZoom();
+    super.dispose();
   }
 
   /// 预加载相邻图片
@@ -222,8 +232,9 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
                 enableSlideOutPage: true,
                 initGestureConfigHandler: (state) => GestureConfig(
                   minScale: 0.9, animationMinScale: 0.7, maxScale: 5.0, animationMaxScale: 5.5,
-                  speed: 1.0, inertialSpeed: 100.0, initialScale: 1.0, inPageView: false,
+                  speed: 1.0, inertialSpeed: 500.0, initialScale: 1.0, inPageView: false,
                 ),
+                onDoubleTap: (state) => handleDoubleTapZoom(state),
               ),
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
@@ -280,20 +291,35 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
                   return GestureConfig(
                     minScale: 0.9,
                     animationMinScale: 0.7,
-                    maxScale: 3.0,
-                    animationMaxScale: 3.5,
+                    maxScale: 4.0,
+                    animationMaxScale: 4.5,
                     speed: 1.0,
-                    inertialSpeed: 100.0,
+                    inertialSpeed: 500.0,
                     initialScale: 1.0,
                     inPageView: false,
                     initialAlignment: InitialAlignment.center,
                   );
+                },
+                onDoubleTap: (state) => handleDoubleTapZoom(state, imageUrl: widget.imageUrl),
+                loadStateChanged: (state) {
+                  // 缓存图片尺寸用于智能缩放
+                  if (state.extendedImageLoadState == LoadState.completed) {
+                    final imageInfo = state.extendedImageInfo;
+                    if (imageInfo != null && widget.imageUrl != null) {
+                      cacheImageSize(widget.imageUrl!, Size(
+                        imageInfo.image.width.toDouble(),
+                        imageInfo.image.height.toDouble(),
+                      ));
+                    }
+                  }
+                  return null;
                 },
               )
             else
               // 画廊模式：使用 ExtendedImageGesturePageView 支持滑动切换
               ExtendedImageGesturePageView.builder(
                 itemCount: images.length,
+                physics: const BouncingScrollPhysics(),
                 controller: ExtendedPageController(
                   initialPage: widget.initialIndex,
                   pageSpacing: 50,
@@ -322,18 +348,29 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
                       return GestureConfig(
                         minScale: 0.9,
                         animationMinScale: 0.7,
-                        maxScale: 3.0,
-                        animationMaxScale: 3.5,
+                        maxScale: 4.0,
+                        animationMaxScale: 4.5,
                         speed: 1.0,
-                        inertialSpeed: 100.0,
+                        inertialSpeed: 500.0,
                         initialScale: 1.0,
                         inPageView: true, // 必须为 true
                         initialAlignment: InitialAlignment.center,
                       );
                     },
+                    onDoubleTap: (state) => handleDoubleTapZoom(state, imageUrl: url),
                     loadStateChanged: (state) {
                       if (state.extendedImageLoadState == LoadState.loading) {
                         return const Center(child: LoadingSpinner());
+                      }
+                      // 缓存图片尺寸用于智能缩放
+                      if (state.extendedImageLoadState == LoadState.completed) {
+                        final imageInfo = state.extendedImageInfo;
+                        if (imageInfo != null) {
+                          cacheImageSize(url, Size(
+                            imageInfo.image.width.toDouble(),
+                            imageInfo.image.height.toDouble(),
+                          ));
+                        }
                       }
                       return null;
                     },
