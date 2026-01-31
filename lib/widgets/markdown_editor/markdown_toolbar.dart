@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../services/discourse_service.dart';
 import 'emoji_picker.dart';
+import 'image_upload_dialog.dart';
 import 'link_insert_dialog.dart';
 
 /// Markdown 工具栏组件
@@ -360,13 +361,22 @@ class MarkdownToolbarState extends State<MarkdownToolbar> with WidgetsBindingObs
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
 
+      // 显示确认弹框
+      if (!mounted) return;
+      final result = await showImageUploadDialog(
+        context,
+        imagePath: image.path,
+        imageName: image.name,
+      );
+      if (result == null) return; // 用户取消
+
       setState(() => _isUploading = true);
 
       final service = DiscourseService();
-      final url = await service.uploadImage(image.path);
+      final url = await service.uploadImage(result.path);
 
       if (!mounted) return;
-      insertText('![${image.name}]($url)\n');
+      insertText('![${result.originalName}]($url)\n');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
