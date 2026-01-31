@@ -655,6 +655,126 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
     ));
   }
 
+  /// 更新帖子的解决方案状态
+  void updatePostSolution(int postId, bool accepted) {
+    final currentDetail = state.value;
+    if (currentDetail == null) return;
+
+    final currentPosts = currentDetail.postStream.posts;
+    final newPosts = <Post>[];
+
+    for (final post in currentPosts) {
+      if (post.id == postId) {
+        // 更新目标帖子的状态
+        newPosts.add(Post(
+          id: post.id,
+          name: post.name,
+          username: post.username,
+          avatarTemplate: post.avatarTemplate,
+          animatedAvatar: post.animatedAvatar,
+          cooked: post.cooked,
+          postNumber: post.postNumber,
+          postType: post.postType,
+          updatedAt: post.updatedAt,
+          createdAt: post.createdAt,
+          likeCount: post.likeCount,
+          replyCount: post.replyCount,
+          replyToPostNumber: post.replyToPostNumber,
+          replyToUser: post.replyToUser,
+          scoreHidden: post.scoreHidden,
+          canEdit: post.canEdit,
+          canDelete: post.canDelete,
+          canRecover: post.canRecover,
+          canWiki: post.canWiki,
+          bookmarked: post.bookmarked,
+          bookmarkId: post.bookmarkId,
+          read: post.read,
+          actionsSummary: post.actionsSummary,
+          linkCounts: post.linkCounts,
+          reactions: post.reactions,
+          currentUserReaction: post.currentUserReaction,
+          polls: post.polls,
+          pollsVotes: post.pollsVotes,
+          actionCode: post.actionCode,
+          actionCodeWho: post.actionCodeWho,
+          actionCodePath: post.actionCodePath,
+          flairUrl: post.flairUrl,
+          flairName: post.flairName,
+          flairBgColor: post.flairBgColor,
+          flairColor: post.flairColor,
+          flairGroupId: post.flairGroupId,
+          mentionedUsers: post.mentionedUsers,
+          acceptedAnswer: accepted,
+          canAcceptAnswer: post.canAcceptAnswer,
+          canUnacceptAnswer: accepted, // 如果已采纳，则可以取消
+        ));
+      } else if (accepted && post.acceptedAnswer) {
+        // 如果是新采纳，清除其他帖子的已采纳状态
+        newPosts.add(Post(
+          id: post.id,
+          name: post.name,
+          username: post.username,
+          avatarTemplate: post.avatarTemplate,
+          animatedAvatar: post.animatedAvatar,
+          cooked: post.cooked,
+          postNumber: post.postNumber,
+          postType: post.postType,
+          updatedAt: post.updatedAt,
+          createdAt: post.createdAt,
+          likeCount: post.likeCount,
+          replyCount: post.replyCount,
+          replyToPostNumber: post.replyToPostNumber,
+          replyToUser: post.replyToUser,
+          scoreHidden: post.scoreHidden,
+          canEdit: post.canEdit,
+          canDelete: post.canDelete,
+          canRecover: post.canRecover,
+          canWiki: post.canWiki,
+          bookmarked: post.bookmarked,
+          bookmarkId: post.bookmarkId,
+          read: post.read,
+          actionsSummary: post.actionsSummary,
+          linkCounts: post.linkCounts,
+          reactions: post.reactions,
+          currentUserReaction: post.currentUserReaction,
+          polls: post.polls,
+          pollsVotes: post.pollsVotes,
+          actionCode: post.actionCode,
+          actionCodeWho: post.actionCodeWho,
+          actionCodePath: post.actionCodePath,
+          flairUrl: post.flairUrl,
+          flairName: post.flairName,
+          flairBgColor: post.flairBgColor,
+          flairColor: post.flairColor,
+          flairGroupId: post.flairGroupId,
+          mentionedUsers: post.mentionedUsers,
+          acceptedAnswer: false,
+          canAcceptAnswer: post.canAcceptAnswer,
+          canUnacceptAnswer: false,
+        ));
+      } else {
+        newPosts.add(post);
+      }
+    }
+
+    // 查找被采纳帖子的 postNumber
+    int? acceptedPostNumber;
+    if (accepted) {
+      final acceptedPost = newPosts.firstWhere((p) => p.id == postId);
+      acceptedPostNumber = acceptedPost.postNumber;
+    }
+
+    // 更新话题的已解决状态
+    state = AsyncValue.data(currentDetail.copyWith(
+      postStream: PostStream(
+        posts: newPosts,
+        stream: currentDetail.postStream.stream,
+      ),
+      hasAcceptedAnswer: accepted,
+      acceptedAnswerPostNumber: acceptedPostNumber,
+    ));
+  }
+
   /// 更新话题投票状态
   void updateTopicVote(int newVoteCount, bool userVoted) {
     final currentDetail = state.value;

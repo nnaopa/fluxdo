@@ -1781,4 +1781,40 @@ class DiscourseService {
       return Response(requestOptions: RequestOptions());
     });
   }
+
+  /// 接受答案（标记帖子为问题的解决方案）
+  ///
+  /// [postId] 帖子 ID
+  /// 返回接受答案的信息，失败返回 null
+  Future<Map<String, dynamic>?> acceptAnswer(int postId) async {
+    try {
+      final response = await _dio.post(
+        '/solution/accept',
+        data: {'id': postId},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      return response.data as Map<String, dynamic>?;
+    } catch (e) {
+      print('[DiscourseService] acceptAnswer failed: $e');
+      return null;
+    }
+  }
+
+  /// 取消接受答案
+  ///
+  /// [postId] 帖子 ID
+  /// 返回 true 表示成功
+  Future<bool> unacceptAnswer(int postId) async {
+    try {
+      await _dio.post(
+        '/solution/unaccept',
+        data: {'id': postId},
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+      return true;
+    } catch (e) {
+      print('[DiscourseService] unacceptAnswer failed: $e');
+      return false;
+    }
+  }
 }

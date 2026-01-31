@@ -86,6 +86,18 @@ class TopicDetailHeader extends ConsumerWidget {
                       ),
                     ),
                   ),
+                if (detail.hasAcceptedAnswer)
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(
+                        Icons.check_box,
+                        size: 20,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
                 ...EmojiText.buildEmojiSpans(context, detail.title, theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   height: 1.4,

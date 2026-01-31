@@ -150,6 +150,10 @@ class Topic {
   final int? lastReadPostNumber;   // 最后阅读的帖子编号
   final int highestPostNumber;     // 最高帖子编号
 
+  // 已解决问题相关
+  final bool hasAcceptedAnswer;    // 话题是否有被接受的答案
+  final bool canHaveAnswer;        // 话题是否可以有解决方案（用于显示未解决状态）
+
   Topic({
     required this.id,
     required this.title,
@@ -174,6 +178,8 @@ class Topic {
     this.newPosts = 0,
     this.lastReadPostNumber,
     this.highestPostNumber = 0,
+    this.hasAcceptedAnswer = false,
+    this.canHaveAnswer = false,
   });
 
   factory Topic.fromJson(Map<String, dynamic> json, {Map<int, TopicUser>? userMap}) {
@@ -203,6 +209,8 @@ class Topic {
       newPosts: json['new_posts'] as int? ?? 0,
       lastReadPostNumber: json['last_read_post_number'] as int?,
       highestPostNumber: json['highest_post_number'] as int? ?? 0,
+      hasAcceptedAnswer: json['has_accepted_answer'] as bool? ?? false,
+      canHaveAnswer: json['can_have_answer'] as bool? ?? false,
     );
   }
 }
@@ -349,6 +357,11 @@ class Post {
   // 被提及用户（含状态信息）
   final List<MentionedUser>? mentionedUsers;
 
+  // 已解决问题相关
+  final bool acceptedAnswer;       // 此帖子是否是被接受的答案
+  final bool canAcceptAnswer;      // 当前用户是否可以接受此帖子为答案
+  final bool canUnacceptAnswer;    // 当前用户是否可以取消接受
+
   Post({
     required this.id,
     this.name,
@@ -387,6 +400,9 @@ class Post {
     this.flairColor,
     this.flairGroupId,
     this.mentionedUsers,
+    this.acceptedAnswer = false,
+    this.canAcceptAnswer = false,
+    this.canUnacceptAnswer = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -442,6 +458,9 @@ class Post {
       mentionedUsers: (json['mentioned_users'] as List<dynamic>?)
           ?.map((e) => MentionedUser.fromJson(e as Map<String, dynamic>))
           .toList(),
+      acceptedAnswer: json['accepted_answer'] as bool? ?? false,
+      canAcceptAnswer: json['can_accept_answer'] as bool? ?? false,
+      canUnacceptAnswer: json['can_unaccept_answer'] as bool? ?? false,
     );
   }
 
@@ -509,6 +528,10 @@ class TopicDetail {
   // 订阅级别
   final TopicNotificationLevel notificationLevel;
 
+  // 已解决问题相关
+  final bool hasAcceptedAnswer;         // 话题是否有被接受的答案
+  final int? acceptedAnswerPostNumber;  // 被接受答案的帖子编号
+
   TopicDetail({
     required this.id,
     required this.title,
@@ -532,15 +555,39 @@ class TopicDetail {
     this.hasCachedSummary = false,
     this.hasSummary = false,
     this.notificationLevel = TopicNotificationLevel.regular,
+    this.hasAcceptedAnswer = false,
+    this.acceptedAnswerPostNumber,
   });
 
   factory TopicDetail.fromJson(Map<String, dynamic> json) {
+    final postStream = PostStream.fromJson(json['post_stream'] as Map<String, dynamic>);
+
+    // 解析 accepted_answer：topic 级别返回的是一个对象 {post_number, username, ...}
+    final acceptedAnswerData = json['accepted_answer'];
+    int? acceptedAnswerPostNumber;
+    bool hasAcceptedAnswer = false;
+
+    if (acceptedAnswerData is Map<String, dynamic>) {
+      // topic 级别的 accepted_answer 是一个对象
+      acceptedAnswerPostNumber = acceptedAnswerData['post_number'] as int?;
+      hasAcceptedAnswer = true;
+    }
+
+    // 备用方案：如果 topic 级别没有，从帖子的 topic_accepted_answer 或 accepted_answer 字段推断
+    if (!hasAcceptedAnswer) {
+      hasAcceptedAnswer = json['has_accepted_answer'] as bool? ?? false;
+    }
+    if (hasAcceptedAnswer && acceptedAnswerPostNumber == null) {
+      final acceptedPost = postStream.posts.where((p) => p.acceptedAnswer).firstOrNull;
+      acceptedAnswerPostNumber = acceptedPost?.postNumber;
+    }
+
     return TopicDetail(
       id: json['id'] as int,
       title: json['title'] as String? ?? '',
       slug: json['slug'] as String? ?? '',
       postsCount: json['posts_count'] as int? ?? 0,
-      postStream: PostStream.fromJson(json['post_stream'] as Map<String, dynamic>),
+      postStream: postStream,
       categoryId: json['category_id'] as int? ?? 0,
       closed: json['closed'] as bool? ?? false,
       archived: json['archived'] as bool? ?? false,
@@ -562,6 +609,8 @@ class TopicDetail {
       notificationLevel: TopicNotificationLevel.fromValue(
         (json['details'] as Map<String, dynamic>?)?['notification_level'] as int?,
       ),
+      hasAcceptedAnswer: hasAcceptedAnswer,
+      acceptedAnswerPostNumber: acceptedAnswerPostNumber,
     );
   }
 
@@ -589,6 +638,8 @@ class TopicDetail {
     bool? hasCachedSummary,
     bool? hasSummary,
     TopicNotificationLevel? notificationLevel,
+    bool? hasAcceptedAnswer,
+    int? acceptedAnswerPostNumber,
   }) {
     return TopicDetail(
       id: id ?? this.id,
@@ -613,6 +664,8 @@ class TopicDetail {
       hasCachedSummary: hasCachedSummary ?? this.hasCachedSummary,
       hasSummary: hasSummary ?? this.hasSummary,
       notificationLevel: notificationLevel ?? this.notificationLevel,
+      hasAcceptedAnswer: hasAcceptedAnswer ?? this.hasAcceptedAnswer,
+      acceptedAnswerPostNumber: acceptedAnswerPostNumber ?? this.acceptedAnswerPostNumber,
     );
   }
 }

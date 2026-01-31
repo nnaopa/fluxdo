@@ -359,6 +359,11 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     }
   }
 
+  void _handleSolutionChanged(int postId, bool accepted) {
+    final params = TopicDetailParams(widget.topicId, postNumber: _scrollController.currentPostNumber, instanceId: _instanceId);
+    ref.read(topicDetailProvider(params).notifier).updatePostSolution(postId, accepted);
+  }
+
   void _shareTopic() {
     final user = ref.read(currentUserProvider).value;
     final username = user?.username ?? '';
@@ -885,6 +890,18 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
                     ),
                   ),
                 ),
+              if (detail?.hasAcceptedAnswer ?? false)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.check_box,
+                      size: 18,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
               ...EmojiText.buildEmojiSpans(context, detail?.title ?? widget.initialTitle ?? '', theme.textTheme.titleMedium),
             ],
           ),
@@ -1238,6 +1255,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       onEdit: _handleEdit,
       onVoteChanged: _handleVoteChanged,
       onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
+      onSolutionChanged: _handleSolutionChanged,
       onScrollNotification: _scrollController.handleScrollNotification,
     );
 

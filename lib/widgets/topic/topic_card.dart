@@ -120,6 +120,30 @@ class TopicCard extends ConsumerWidget {
                                   ),
                                 ),
                               ),
+                            if (topic.hasAcceptedAnswer)
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    Icons.check_box,
+                                    size: 16,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              )
+                            else if (topic.canHaveAnswer)
+                              WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    Icons.check_box_outline_blank,
+                                    size: 16,
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                              ),
                             ...EmojiText.buildEmojiSpans(context, topic.title, theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               height: 1.3,
@@ -484,6 +508,30 @@ class CompactTopicCard extends ConsumerWidget {
                               Icons.lock_outline,
                               size: 12,
                               color: isUnread ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      if (topic.hasAcceptedAnswer)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 3),
+                            child: Icon(
+                              Icons.check_box,
+                              size: 12,
+                              color: Colors.green,
+                            ),
+                          ),
+                        )
+                      else if (topic.canHaveAnswer)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 3),
+                            child: Icon(
+                              Icons.check_box_outline_blank,
+                              size: 12,
+                              color: theme.colorScheme.outline,
                             ),
                           ),
                         ),

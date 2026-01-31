@@ -35,8 +35,11 @@ class PostItem extends ConsumerStatefulWidget {
   final VoidCallback? onEdit; // 编辑回调
   final void Function(int postNumber)? onJumpToPost;
   final void Function(bool isVisible)? onVisibilityChanged;
+  final void Function(int postId, bool accepted)? onSolutionChanged; // 解决方案状态变化回调
   final bool highlight;
   final bool isTopicOwner;
+  final bool topicHasAcceptedAnswer; // 话题是否有解决方案
+  final int? acceptedAnswerPostNumber; // 解决方案的帖子编号
 
   const PostItem({
     super.key,
@@ -47,8 +50,11 @@ class PostItem extends ConsumerStatefulWidget {
     this.onEdit,
     this.onJumpToPost,
     this.onVisibilityChanged,
+    this.onSolutionChanged,
     this.highlight = false,
     this.isTopicOwner = false,
+    this.topicHasAcceptedAnswer = false,
+    this.acceptedAnswerPostNumber,
   });
 
   @override
@@ -88,6 +94,10 @@ class _PostItemState extends ConsumerState<PostItem> {
   Widget? _cachedAvatarWidget;
   int? _cachedPostId; // 记录缓存的 post ID
 
+  // 解决方案状态
+  bool _isAcceptedAnswer = false;
+  bool _isTogglingAnswer = false;
+
   bool get _canLoadMoreReplies => _replies.length < widget.post.replyCount;
 
   @override
@@ -119,6 +129,7 @@ class _PostItemState extends ConsumerState<PostItem> {
     _currentUserReaction = widget.post.currentUserReaction;
     _isBookmarked = widget.post.bookmarked;
     _bookmarkId = widget.post.bookmarkId; // 初始化书签 ID
+    _isAcceptedAnswer = widget.post.acceptedAnswer; // 初始化解决方案状态
   }
 
   void _initAvatarWidget() {
@@ -479,6 +490,46 @@ class _PostItemState extends ConsumerState<PostItem> {
     }
   }
 
+  /// 切换解决方案状态
+  Future<void> _toggleSolution() async {
+    if (_isTogglingAnswer) return;
+
+    HapticFeedback.lightImpact();
+    setState(() => _isTogglingAnswer = true);
+
+    try {
+      if (_isAcceptedAnswer) {
+        // 取消采纳
+        final success = await _service.unacceptAnswer(widget.post.id);
+        if (mounted && success) {
+          setState(() => _isAcceptedAnswer = false);
+          widget.onSolutionChanged?.call(widget.post.id, false);
+          _showSnackBar('已取消采纳');
+        } else if (mounted) {
+          _showSnackBar('取消采纳失败');
+        }
+      } else {
+        // 采纳答案
+        final result = await _service.acceptAnswer(widget.post.id);
+        if (mounted && result != null) {
+          setState(() => _isAcceptedAnswer = true);
+          widget.onSolutionChanged?.call(widget.post.id, true);
+          _showSnackBar('已采纳为解决方案');
+        } else if (mounted) {
+          _showSnackBar('采纳失败');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('操作失败');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTogglingAnswer = false);
+      }
+    }
+  }
+
   /// 显示举报对话框
   void _showFlagDialog(BuildContext context, ThemeData theme) {
     showModalBottomSheet(
@@ -533,6 +584,24 @@ class _PostItemState extends ConsumerState<PostItem> {
                 },
               ),
               if (!isGuest) ...[
+                // 标记解决方案（当可以接受或取消接受时显示）
+                if (widget.post.canAcceptAnswer || widget.post.canUnacceptAnswer)
+                  ListTile(
+                    leading: Icon(
+                      _isAcceptedAnswer ? Icons.check_box : Icons.check_box_outline_blank,
+                      color: _isAcceptedAnswer ? Colors.green : theme.colorScheme.onSurface,
+                    ),
+                    title: Text(
+                      _isAcceptedAnswer ? '取消采纳' : '采纳为解决方案',
+                      style: TextStyle(
+                        color: _isAcceptedAnswer ? Colors.green : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    onTap: _isTogglingAnswer ? null : () {
+                      Navigator.pop(ctx);
+                      _toggleSolution();
+                    },
+                  ),
                 // 书签
                 ListTile(
                   leading: Icon(
@@ -648,7 +717,6 @@ class _PostItemState extends ConsumerState<PostItem> {
       child: RepaintBoundary(
         child: Container(
           constraints: const BoxConstraints(minHeight: 80),
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: targetColor,
             border: Border(
@@ -658,9 +726,57 @@ class _PostItemState extends ConsumerState<PostItem> {
               ),
             ),
           ),
-          child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              // 背景水印印章
+              if (_isAcceptedAnswer || widget.post.canAcceptAnswer)
+                Positioned(
+                  right: 20,
+                  top: 10,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: _isAcceptedAnswer ? 0.12 : 0.05,
+                      child: Transform.rotate(
+                        angle: -0.15,
+                        child: CustomPaint(
+                          painter: _StampPainter(
+                            color: _isAcceptedAnswer ? Colors.green : theme.colorScheme.outline,
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _isAcceptedAnswer ? Icons.verified : Icons.help_outline,
+                                  color: _isAcceptedAnswer ? Colors.green : theme.colorScheme.outline,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _isAcceptedAnswer ? '已解决' : '待解决',
+                                  style: TextStyle(
+                                    color: _isAcceptedAnswer ? Colors.green : theme.colorScheme.outline,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 2,
+                                    fontFamily: theme.textTheme.titleLarge?.fontFamily,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
           // Header: Avatar, Name, Time
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -861,7 +977,11 @@ class _PostItemState extends ConsumerState<PostItem> {
                         );
                       },
                     ),
-                    
+
+                    // 主贴显示解决方案跳转提示
+                    if (post.postNumber == 1 && widget.topicHasAcceptedAnswer && widget.acceptedAnswerPostNumber != null)
+                      _buildSolutionBanner(theme),
+
                     const SizedBox(height: 12),
 
                     // Actions
@@ -1064,9 +1184,131 @@ class _PostItemState extends ConsumerState<PostItem> {
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建解决方案跳转横幅（仅在主贴显示）
+  Widget _buildSolutionBanner(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              Colors.green.withValues(alpha: 0.12),
+              Colors.green.withValues(alpha: 0.04),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: Colors.green.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () {
+              if (widget.acceptedAnswerPostNumber != null) {
+                widget.onJumpToPost?.call(widget.acceptedAnswerPostNumber!);
+              }
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  // 左侧图标区域
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.brightness == Brightness.dark 
+                          ? Colors.black.withValues(alpha: 0.2) 
+                          : Colors.white.withValues(alpha: 0.6),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.verified, // 统一使用 verified 图标
+                      color: Colors.green,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  
+                  // 中间文字区域
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '此话题已解决', // 文案微调，更专业
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: Colors.green.shade800,
+                            fontWeight: FontWeight.w800, // 加粗
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '查看最佳答案',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '#${widget.acceptedAnswerPostNumber}',
+                                style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'monospace', // 等宽字体显示楼层号更像代码/引用
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // 右侧箭头
+                  Icon(
+                    Icons.arrow_forward_rounded, // 圆润箭头
+                    size: 20,
+                    color: Colors.green.withValues(alpha: 0.6),
+                  ),
+                ],
+              ),
             ),
-          );
-        }
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildReplyHistoryPreview(ThemeData theme) {
     // 如果没有数据就不显示（loading 时不会进入这里）
@@ -1699,4 +1941,47 @@ class _PostAvatarState extends State<_PostAvatar> {
       ),
     );
   }
+}
+
+/// 模拟印章残缺边框的绘制器
+class _StampPainter extends CustomPainter {
+  final Color color;
+  _StampPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    const double radius = 8;
+    
+    // 绘制残缺的矩形边框
+    // 顶部边（部分）
+    path.moveTo(size.width * 0.1, 0);
+    path.lineTo(size.width - radius, 0);
+    path.quadraticBezierTo(size.width, 0, size.width, radius);
+    
+    // 右侧边（部分）
+    path.lineTo(size.width, size.height * 0.7);
+    
+    // 底部边（从右向左，部分）
+    path.moveTo(size.width * 0.8, size.height);
+    path.lineTo(radius, size.height);
+    path.quadraticBezierTo(0, size.height, 0, size.height - radius);
+    
+    // 左侧边（部分）
+    path.lineTo(0, size.height * 0.3);
+    path.moveTo(0, size.height * 0.15);
+    path.lineTo(0, radius);
+    path.quadraticBezierTo(0, 0, radius, 0);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

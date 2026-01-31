@@ -30,6 +30,7 @@ class TopicPostList extends StatelessWidget {
   final void Function(Post post) onEdit; // 编辑回调
   final void Function(int, bool) onVoteChanged;
   final void Function(TopicNotificationLevel)? onNotificationLevelChanged;
+  final void Function(int postId, bool accepted)? onSolutionChanged; // 解决方案状态变化
   final bool Function(ScrollNotification) onScrollNotification;
 
   const TopicPostList({
@@ -53,6 +54,7 @@ class TopicPostList extends StatelessWidget {
     required this.onEdit,
     required this.onVoteChanged,
     this.onNotificationLevelChanged,
+    this.onSolutionChanged,
     required this.onScrollNotification,
   });
 
@@ -128,12 +130,15 @@ class TopicPostList extends StatelessWidget {
                       topicId: detail.id,
                       highlight: highlightPostNumber == post.postNumber,
                       isTopicOwner: detail.createdBy?.username == post.username,
+                      topicHasAcceptedAnswer: detail.hasAcceptedAnswer,
+                      acceptedAnswerPostNumber: detail.acceptedAnswerPostNumber,
                       onLike: () => ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('点赞功能开发中...')),
                       ),
                       onReply: isLoggedIn ? () => onReply(post) : null,
                       onEdit: isLoggedIn && post.canEdit ? () => onEdit(post) : null,
                       onJumpToPost: onJumpToPost,
+                      onSolutionChanged: onSolutionChanged,
                       onVisibilityChanged: (isVisible) =>
                           onPostVisibilityChanged(post.postNumber, isVisible),
                     ),
@@ -215,12 +220,15 @@ class TopicPostList extends StatelessWidget {
                           topicId: detail.id,
                           highlight: highlightPostNumber == post.postNumber,
                           isTopicOwner: detail.createdBy?.username == post.username,
+                          topicHasAcceptedAnswer: detail.hasAcceptedAnswer,
+                          acceptedAnswerPostNumber: detail.acceptedAnswerPostNumber,
                           onLike: () => ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('点赞功能开发中...')),
                           ),
                           onReply: isLoggedIn ? () => onReply(post) : null,
                           onEdit: isLoggedIn && post.canEdit ? () => onEdit(post) : null,
                           onJumpToPost: onJumpToPost,
+                          onSolutionChanged: onSolutionChanged,
                           onVisibilityChanged: (isVisible) =>
                               onPostVisibilityChanged(post.postNumber, isVisible),
                         ),
