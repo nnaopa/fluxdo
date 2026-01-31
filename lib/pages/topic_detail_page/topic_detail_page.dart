@@ -9,6 +9,7 @@ import 'dart:async';
 import '../../constants.dart';
 import '../../models/topic.dart';
 import '../../utils/responsive.dart';
+import '../../providers/selected_topic_provider.dart';
 import '../../providers/discourse_providers.dart';
 import '../../providers/message_bus_providers.dart';
 import '../../services/discourse_service.dart';
@@ -26,6 +27,7 @@ import 'controllers/topic_scroll_controller.dart';
 import 'widgets/topic_detail_overlay.dart';
 import 'widgets/topic_post_list.dart';
 import 'widgets/topic_detail_header.dart';
+import '../../widgets/layout/master_detail_layout.dart';
 
 /// 话题详情页面
 class TopicDetailPage extends ConsumerStatefulWidget {
@@ -72,6 +74,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
   Timer? _throttleTimer;
   bool _isScrollToBottomScheduled = false;
   Set<int> _lastReadPostNumbers = {};
+  bool? _lastCanShowDetailPane;
+  bool _isAutoSwitching = false;
 
   @override
   void initState() {
@@ -272,19 +276,27 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     if (detailAsync.isLoading) return;
 
     final detail = ref.read(topicDetailProvider(params)).value;
+    final notifier = ref.read(topicDetailProvider(params).notifier);
     final anchorPostNumber = _visibilityTracker.getRefreshAnchorPostNumber(
       detail?.postStream.posts.firstOrNull?.postNumber ?? _scrollController.currentPostNumber,
     );
 
     setState(() => _isRefreshing = true);
-    await ref.read(topicDetailProvider(params).notifier).refreshWithPostNumber(anchorPostNumber);
+    await notifier.refreshWithPostNumber(anchorPostNumber);
 
     if (!mounted) return;
     setState(() => _isRefreshing = false);
 
-    if (ref.read(topicDetailProvider(params)).value == null) return;
+    final updatedDetail = ref.read(topicDetailProvider(params)).value;
+    if (updatedDetail == null) return;
 
-    _scrollController.prepareRefresh(anchorPostNumber, skipHighlight: true);
+    final isFiltered = notifier.isSummaryMode || notifier.isAuthorOnlyMode;
+    final hasAnchor = updatedDetail.postStream.posts.any((p) => p.postNumber == anchorPostNumber);
+    if (!isFiltered || hasAnchor) {
+      _scrollController.prepareRefresh(anchorPostNumber, skipHighlight: true);
+    } else {
+      _scrollController.clearJumpTarget();
+    }
     _highlightController.skipNextJumpHighlight = true;
   }
 
@@ -403,12 +415,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       _scrollController.prepareJumpToPost(postNumber);
       _highlightController.skipNextJumpHighlight = false;
 
-      // 如果处于过滤模式，先取消过滤再跳转
+      // 如果处于过滤模式，先尝试保持过滤跳转，失败则回退取消过滤
       if (notifier.isSummaryMode || notifier.isAuthorOnlyMode) {
-        setState(() => _isSwitchingMode = true);
-        _visibilityTracker.reset();
-        await notifier.cancelFilterAndReloadWithPostNumber(postNumber);
-        if (mounted) setState(() => _isSwitchingMode = false);
+        await _reloadWithFilterFallback(postNumber: postNumber);
       } else {
         await notifier.reloadWithPostNumber(postNumber);
       }
@@ -509,18 +518,69 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
 
       final notifier = ref.read(topicDetailProvider(params).notifier);
 
-      // 如果处于过滤模式，先取消过滤再跳转
+      // 如果处于过滤模式，先尝试保持过滤跳转，失败则回退取消过滤
       if (notifier.isSummaryMode || notifier.isAuthorOnlyMode) {
-        setState(() => _isSwitchingMode = true);
-        _visibilityTracker.reset();
-        await notifier.cancelFilterAndReloadWithPostNumber(realPostNumber);
-        if (mounted) setState(() => _isSwitchingMode = false);
+        await _reloadWithFilterFallback(postNumber: realPostNumber, postId: postId);
       } else {
         await notifier.reloadWithPostNumber(realPostNumber);
       }
     } catch (e) {
       print('[TopicDetail] Error fetching post $postId: $e');
     }
+  }
+
+  bool _detailHasTargetPost(TopicDetail detail, {int? postNumber, int? postId}) {
+    if (postId != null) {
+      if (detail.postStream.stream.contains(postId)) return true;
+      if (detail.postStream.posts.any((p) => p.id == postId)) return true;
+    }
+    if (postNumber != null) {
+      if (detail.postStream.posts.any((p) => p.postNumber == postNumber)) return true;
+    }
+    return false;
+  }
+
+  Future<void> _reloadWithFilterFallback({required int postNumber, int? postId}) async {
+    final params = TopicDetailParams(widget.topicId, postNumber: _scrollController.currentPostNumber, instanceId: _instanceId);
+    final notifier = ref.read(topicDetailProvider(params).notifier);
+    final wasSummaryMode = notifier.isSummaryMode;
+    final wasAuthorOnlyMode = notifier.isAuthorOnlyMode;
+
+    setState(() => _isSwitchingMode = true);
+    _visibilityTracker.reset();
+
+    try {
+      await notifier.reloadWithPostNumber(postNumber);
+      if (!mounted) return;
+
+      final detail = ref.read(topicDetailProvider(params)).value;
+      final hasTarget = detail != null && _detailHasTargetPost(detail, postNumber: postNumber, postId: postId);
+      final shouldFallback = detail != null && _shouldFallbackFilter(detail, wasSummaryMode, wasAuthorOnlyMode);
+      if (!hasTarget || shouldFallback) {
+        _visibilityTracker.reset();
+        await notifier.cancelFilterAndReloadWithPostNumber(postNumber);
+      }
+    } finally {
+      if (mounted) setState(() => _isSwitchingMode = false);
+    }
+  }
+
+  bool _shouldFallbackFilter(TopicDetail detail, bool wasSummaryMode, bool wasAuthorOnlyMode) {
+    if (wasSummaryMode) {
+      if (!detail.hasSummary) return true;
+      if (detail.postsCount > 0 && detail.postStream.stream.length >= detail.postsCount) {
+        return true;
+      }
+    }
+
+    if (wasAuthorOnlyMode) {
+      final author = detail.createdBy?.username;
+      if (author == null || author.isEmpty) return true;
+      final hasOtherUsers = detail.postStream.posts.any((p) => p.username != author);
+      if (hasOtherUsers) return true;
+    }
+
+    return false;
   }
 
   void _scrollToInitialPosition(List<Post> posts, int? dividerPostIndex) {
@@ -707,6 +767,40 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     }
   }
 
+  void _maybeSwitchToMasterDetail(bool canShowDetailPane, TopicDetail? detail) {
+    if (widget.embeddedMode) {
+      _lastCanShowDetailPane = canShowDetailPane;
+      return;
+    }
+
+    final previous = _lastCanShowDetailPane;
+    _lastCanShowDetailPane = canShowDetailPane;
+
+    if (_isAutoSwitching || previous == null || previous == canShowDetailPane) {
+      return;
+    }
+
+    if (!previous && canShowDetailPane) {
+      _isAutoSwitching = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final navigator = Navigator.of(context);
+        if (!navigator.canPop()) {
+          _isAutoSwitching = false;
+          return;
+        }
+
+        final currentPostNumber = _scrollController.currentPostNumber ?? widget.scrollToPostNumber;
+        ref.read(selectedTopicProvider.notifier).select(
+          topicId: widget.topicId,
+          initialTitle: detail?.title ?? widget.initialTitle,
+          scrollToPostNumber: currentPostNumber,
+        );
+        navigator.pop();
+      });
+    }
+  }
+
   /// 在大屏上为内容添加宽度约束
   Widget _wrapWithConstraint(Widget child) {
     if (Responsive.isMobile(context)) return child;
@@ -865,6 +959,7 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLoggedIn = ref.watch(currentUserProvider).value != null;
+    final canShowDetailPane = MasterDetailLayout.canShowBothPanesFor(context);
 
     ref.listen<AsyncValue<void>>(authStateProvider, (_, __) {
       if (!mounted) return;
@@ -878,6 +973,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     final detailAsync = ref.watch(topicDetailProvider(params));
     final detail = detailAsync.value;
     final notifier = ref.read(topicDetailProvider(params).notifier);
+
+    _maybeSwitchToMasterDetail(canShowDetailPane, detail);
 
     // 监听 MessageBus 新回复通知
     ref.listen(topicChannelProvider(widget.topicId), (previous, next) {

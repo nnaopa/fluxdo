@@ -43,6 +43,7 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
   bool get isLoadingMore => _isLoadingMore;
   bool get isSummaryMode => _filter == 'summary';
   bool get isAuthorOnlyMode => _usernameFilter != null;
+  bool get _isFilteredMode => _filter != null || _usernameFilter != null;
 
   @override
   Future<TopicDetail> build() async {
@@ -107,7 +108,12 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
 
     state = await AsyncValue.guard(() async {
       final service = ref.read(discourseServiceProvider);
-      final detail = await service.getTopicDetail(arg.topicId, postNumber: postNumber);
+      final detail = await service.getTopicDetail(
+        arg.topicId,
+        postNumber: postNumber,
+        filter: _filter,
+        usernameFilters: _usernameFilter,
+      );
 
       final posts = detail.postStream.posts;
       final stream = detail.postStream.stream;
@@ -217,9 +223,71 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
     }
   }
 
+  /// 过滤模式下根据 stream ID 加载更早的帖子
+  Future<void> _loadPreviousByStreamIds() async {
+    _isLoadingPrevious = true;
+
+    try {
+      state = const AsyncLoading<TopicDetail>().copyWithPrevious(state);
+
+      state = await AsyncValue.guard(() async {
+        final currentDetail = state.requireValue;
+        final currentPosts = currentDetail.postStream.posts;
+        final stream = currentDetail.postStream.stream;
+
+        if (currentPosts.isEmpty) {
+          _hasMoreBefore = false;
+          return currentDetail;
+        }
+
+        // 找到已加载的第一个帖子在 stream 中的位置
+        final firstPostId = currentPosts.first.id;
+        final firstIndex = stream.indexOf(firstPostId);
+
+        if (firstIndex <= 0) {
+          _hasMoreBefore = false;
+          return currentDetail;
+        }
+
+        // 获取上一批帖子 ID（最多 20 个）
+        final start = (firstIndex - 20).clamp(0, firstIndex);
+        final prevIds = stream.sublist(start, firstIndex);
+
+        if (prevIds.isEmpty) {
+          _hasMoreBefore = false;
+          return currentDetail;
+        }
+
+        final service = ref.read(discourseServiceProvider);
+        final newPostStream = await service.getPosts(arg.topicId, prevIds);
+
+        // 合并帖子
+        final existingIds = currentPosts.map((p) => p.id).toSet();
+        final newPosts = newPostStream.posts.where((p) => !existingIds.contains(p.id)).toList();
+        final mergedPosts = [...currentPosts, ...newPosts];
+        mergedPosts.sort((a, b) => stream.indexOf(a.id).compareTo(stream.indexOf(b.id)));
+
+        // 检查是否还有更多
+        final newFirstId = mergedPosts.first.id;
+        final newFirstIndex = stream.indexOf(newFirstId);
+        _hasMoreBefore = newFirstIndex > 0;
+
+        return currentDetail.copyWith(
+          postStream: PostStream(posts: mergedPosts, stream: stream),
+        );
+      });
+    } finally {
+      _isLoadingPrevious = false;
+    }
+  }
+
   /// 加载更早的帖子（向上滚动）
   Future<void> loadPrevious() async {
-    if (_filter != null) return;  // 过滤模式下使用不同的分页逻辑
+    if (_isFilteredMode) {
+      if (!_hasMoreBefore || state.isLoading || _isLoadingPrevious) return;
+      await _loadPreviousByStreamIds();
+      return;
+    }
     if (!_hasMoreBefore || state.isLoading || _isLoadingPrevious) return;
     _isLoadingPrevious = true;
 
@@ -277,7 +345,7 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
     if (!_hasMoreAfter || state.isLoading || _isLoadingMore) return;
 
     // 过滤模式下使用 stream ID 加载
-    if (_filter != null) {
+    if (_isFilteredMode) {
       await _loadMoreByStreamIds();
       return;
     }
@@ -629,7 +697,12 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
 
     state = await AsyncValue.guard(() async {
       final service = ref.read(discourseServiceProvider);
-      final detail = await service.getTopicDetail(arg.topicId, postNumber: postNumber);
+      final detail = await service.getTopicDetail(
+        arg.topicId,
+        postNumber: postNumber,
+        filter: _filter,
+        usernameFilters: _usernameFilter,
+      );
 
       final posts = detail.postStream.posts;
       final stream = detail.postStream.stream;
@@ -658,7 +731,12 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
 
     state = await AsyncValue.guard(() async {
       final service = ref.read(discourseServiceProvider);
-      final detail = await service.getTopicDetail(arg.topicId, postNumber: postNumber);
+      final detail = await service.getTopicDetail(
+        arg.topicId,
+        postNumber: _isFilteredMode ? null : postNumber,
+        filter: _filter,
+        usernameFilters: _usernameFilter,
+      );
 
       final posts = detail.postStream.posts;
       final stream = detail.postStream.stream;
