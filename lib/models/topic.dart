@@ -541,9 +541,18 @@ class TopicDetail {
   // 订阅级别
   final TopicNotificationLevel notificationLevel;
 
+  // 话题类型
+  final String archetype;  // 'regular' 或 'private_message'
+
+  // 话题权限（来自 details）
+  final bool canEdit;  // 是否可以编辑话题元数据（标题、分类、标签）
+
   // 已解决问题相关
   final bool hasAcceptedAnswer;         // 话题是否有被接受的答案
   final int? acceptedAnswerPostNumber;  // 被接受答案的帖子编号
+
+  /// 是否为私信
+  bool get isPrivateMessage => archetype == 'private_message';
 
   TopicDetail({
     required this.id,
@@ -568,6 +577,8 @@ class TopicDetail {
     this.hasCachedSummary = false,
     this.hasSummary = false,
     this.notificationLevel = TopicNotificationLevel.regular,
+    this.archetype = 'regular',
+    this.canEdit = false,
     this.hasAcceptedAnswer = false,
     this.acceptedAnswerPostNumber,
   });
@@ -619,9 +630,11 @@ class TopicDetail {
       summarizable: json['summarizable'] as bool? ?? false,
       hasCachedSummary: json['has_cached_summary'] as bool? ?? false,
       hasSummary: json['has_summary'] as bool? ?? false,
+      archetype: json['archetype'] as String? ?? 'regular',
       notificationLevel: TopicNotificationLevel.fromValue(
         (json['details'] as Map<String, dynamic>?)?['notification_level'] as int?,
       ),
+      canEdit: (json['details'] as Map<String, dynamic>?)?['can_edit'] as bool? ?? false,
       hasAcceptedAnswer: hasAcceptedAnswer,
       acceptedAnswerPostNumber: acceptedAnswerPostNumber,
     );
@@ -651,6 +664,8 @@ class TopicDetail {
     bool? hasCachedSummary,
     bool? hasSummary,
     TopicNotificationLevel? notificationLevel,
+    String? archetype,
+    bool? canEdit,
     bool? hasAcceptedAnswer,
     int? acceptedAnswerPostNumber,
   }) {
@@ -677,6 +692,8 @@ class TopicDetail {
       hasCachedSummary: hasCachedSummary ?? this.hasCachedSummary,
       hasSummary: hasSummary ?? this.hasSummary,
       notificationLevel: notificationLevel ?? this.notificationLevel,
+      archetype: archetype ?? this.archetype,
+      canEdit: canEdit ?? this.canEdit,
       hasAcceptedAnswer: hasAcceptedAnswer ?? this.hasAcceptedAnswer,
       acceptedAnswerPostNumber: acceptedAnswerPostNumber ?? this.acceptedAnswerPostNumber,
     );

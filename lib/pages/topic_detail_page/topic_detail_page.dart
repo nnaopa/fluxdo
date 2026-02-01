@@ -28,6 +28,7 @@ import 'widgets/topic_detail_overlay.dart';
 import 'widgets/topic_post_list.dart';
 import 'widgets/topic_detail_header.dart';
 import '../../widgets/layout/master_detail_layout.dart';
+import '../edit_topic_page.dart';
 
 /// 话题详情页面
 class TopicDetailPage extends ConsumerStatefulWidget {
@@ -356,6 +357,36 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     if (updatedPost != null && mounted) {
       // 直接更新帖子，不重新请求
       ref.read(topicDetailProvider(params).notifier).updatePost(updatedPost);
+    }
+  }
+
+  Future<void> _handleEditTopic() async {
+    final params = TopicDetailParams(widget.topicId, postNumber: _scrollController.currentPostNumber, instanceId: _instanceId);
+    final detail = ref.read(topicDetailProvider(params)).value;
+    if (detail == null) return;
+
+    // 获取首贴：优先从已加载的帖子中查找
+    final firstPost = detail.postStream.posts.where((p) => p.postNumber == 1).firstOrNull;
+    // 首贴 id（用于在编辑页面内加载）
+    final firstPostId = detail.postStream.stream.isNotEmpty ? detail.postStream.stream.first : null;
+
+    final result = await Navigator.of(context).push<EditTopicResult>(
+      MaterialPageRoute(
+        builder: (context) => EditTopicPage(
+          topicDetail: detail,
+          firstPost: firstPost,
+          firstPostId: firstPostId,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      ref.read(topicDetailProvider(params).notifier).updateTopicInfo(
+        title: result.title,
+        categoryId: result.categoryId,
+        tags: result.tags,
+        firstPost: result.updatedFirstPost,
+      );
     }
   }
 
@@ -927,6 +958,10 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       return [];
     }
 
+    // 编辑话题入口：可以编辑话题元数据 或 可以编辑首贴内容
+    final firstPost = detail.postStream.posts.where((p) => p.postNumber == 1).firstOrNull;
+    final canEditTopic = detail.canEdit || (firstPost?.canEdit ?? false);
+
     return [
       IgnorePointer(
         ignoring: expandProgress > 0.0,
@@ -942,9 +977,27 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
                   detail.notificationLevel,
                   (level) => _handleNotificationLevelChanged(notifier, level),
                 );
+              } else if (value == 'edit_topic') {
+                _handleEditTopic();
               }
             },
             itemBuilder: (context) => [
+              if (canEditTopic)
+                PopupMenuItem(
+                  value: 'edit_topic',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('编辑话题'),
+                    ],
+                  ),
+                ),
               PopupMenuItem(
                 value: 'subscribe',
                 child: Row(

@@ -956,6 +956,36 @@ class TopicDetailNotifier extends AsyncNotifier<TopicDetail> {
     }
   }
 
+  /// 更新话题信息（用于编辑话题后直接更新）
+  void updateTopicInfo({
+    String? title,
+    int? categoryId,
+    List<String>? tags,
+    Post? firstPost,
+  }) {
+    final currentDetail = state.value;
+    if (currentDetail == null) return;
+
+    // 如果首贴也被编辑，更新 postStream 中的首贴
+    PostStream? updatedPostStream;
+    if (firstPost != null) {
+      final currentPosts = currentDetail.postStream.posts;
+      final index = currentPosts.indexWhere((p) => p.id == firstPost.id);
+      if (index != -1) {
+        final newPosts = [...currentPosts];
+        newPosts[index] = firstPost;
+        updatedPostStream = PostStream(posts: newPosts, stream: currentDetail.postStream.stream);
+      }
+    }
+
+    state = AsyncValue.data(currentDetail.copyWith(
+      title: title ?? currentDetail.title,
+      categoryId: categoryId ?? currentDetail.categoryId,
+      tags: tags ?? currentDetail.tags,
+      postStream: updatedPostStream ?? currentDetail.postStream,
+    ));
+  }
+
   /// 更新已存在的帖子（用于编辑后直接更新）
   void updatePost(Post post) {
     final currentDetail = state.value;

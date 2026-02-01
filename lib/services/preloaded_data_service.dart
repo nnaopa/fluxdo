@@ -154,6 +154,42 @@ class PreloadedDataService {
     return null;
   }
 
+  /// 获取话题标题最小长度
+  Future<int> getMinTopicTitleLength() async {
+    await _ensureLoaded();
+    final value = _siteSettings?['min_topic_title_length'];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 15;
+    return 15; // Discourse 默认值
+  }
+
+  /// 获取私信标题最小长度
+  Future<int> getMinPmTitleLength() async {
+    await _ensureLoaded();
+    final value = _siteSettings?['min_personal_message_title_length'];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 2;
+    return 2; // Discourse 默认值
+  }
+
+  /// 获取首贴内容最小长度
+  Future<int> getMinFirstPostLength() async {
+    await _ensureLoaded();
+    final value = _siteSettings?['min_first_post_length'];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 20;
+    return 20; // Discourse 默认值
+  }
+
+  /// 获取私信内容最小长度
+  Future<int> getMinPmPostLength() async {
+    await _ensureLoaded();
+    final value = _siteSettings?['min_personal_message_post_length'];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 10;
+    return 10; // Discourse 默认值
+  }
+
   /// 获取可用的回应表情列表
   Future<List<String>> getEnabledReactions() async {
     await _ensureLoaded();

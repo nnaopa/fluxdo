@@ -543,6 +543,26 @@ class DiscourseService {
     }
   }
 
+  /// 获取话题标题最小长度
+  Future<int> getMinTopicTitleLength() async {
+    return PreloadedDataService().getMinTopicTitleLength();
+  }
+
+  /// 获取私信标题最小长度
+  Future<int> getMinPmTitleLength() async {
+    return PreloadedDataService().getMinPmTitleLength();
+  }
+
+  /// 获取首贴内容最小长度
+  Future<int> getMinFirstPostLength() async {
+    return PreloadedDataService().getMinFirstPostLength();
+  }
+
+  /// 获取私信内容最小长度
+  Future<int> getMinPmPostLength() async {
+    return PreloadedDataService().getMinPmPostLength();
+  }
+
   /// 搜索用户（用于 @提及自动补全）
   /// [term] 搜索词
   /// [topicId] 话题 ID（可选，用于优先显示参与者）
@@ -1710,6 +1730,29 @@ class DiscourseService {
       print('[DiscourseService] getTopicVoteWho failed: $e');
       return [];
     }
+  }
+
+  /// 更新话题元数据（标题、分类、标签）
+  /// [topicId] 话题 ID
+  /// [title] 新标题（可选）
+  /// [categoryId] 新分类 ID（可选）
+  /// [tags] 新标签列表（可选）
+  Future<void> updateTopic({
+    required int topicId,
+    String? title,
+    int? categoryId,
+    List<String>? tags,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (categoryId != null) data['category_id'] = categoryId;
+    if (tags != null) data['tags[]'] = tags;
+
+    await _dio.put(
+      '/t/-/$topicId.json',
+      data: data,
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
   }
 
   /// 获取帖子原始内容（Markdown）

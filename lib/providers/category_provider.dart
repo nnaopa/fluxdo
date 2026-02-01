@@ -49,6 +49,30 @@ final canTagTopicsProvider = FutureProvider<bool>((ref) async {
   return service.canTagTopics();
 });
 
+/// 话题标题最小长度
+final minTopicTitleLengthProvider = FutureProvider<int>((ref) async {
+  final service = ref.watch(discourseServiceProvider);
+  return service.getMinTopicTitleLength();
+});
+
+/// 私信标题最小长度
+final minPmTitleLengthProvider = FutureProvider<int>((ref) async {
+  final service = ref.watch(discourseServiceProvider);
+  return service.getMinPmTitleLength();
+});
+
+/// 首贴内容最小长度
+final minFirstPostLengthProvider = FutureProvider<int>((ref) async {
+  final service = ref.watch(discourseServiceProvider);
+  return service.getMinFirstPostLength();
+});
+
+/// 私信内容最小长度
+final minPmPostLengthProvider = FutureProvider<int>((ref) async {
+  final service = ref.watch(discourseServiceProvider);
+  return service.getMinPmPostLength();
+});
+
 /// 分类下的话题列表 Provider
 final categoryTopicsProvider = FutureProvider.family<TopicListResponse, String>((ref, slug) async {
   final service = ref.watch(discourseServiceProvider);
