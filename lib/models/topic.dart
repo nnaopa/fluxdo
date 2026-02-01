@@ -708,9 +708,7 @@ class TopicSummary {
       outdated: json['outdated'] as bool? ?? false,
       canRegenerate: json['can_regenerate'] as bool? ?? false,
       newPostsSinceSummary: json['new_posts_since_summary'] as int? ?? 0,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'] as String)
-          : null,
+      updatedAt: TimeUtils.parseUtcTime(json['updated_at'] as String?),
     );
   }
 }

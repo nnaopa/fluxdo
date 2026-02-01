@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../services/discourse_cache_manager.dart';
-import 'package:intl/intl.dart';
+import '../../../../utils/time_utils.dart';
 
 /// 构建 Chat Transcript 聊天记录引用卡片
 ///
@@ -50,15 +50,9 @@ Widget buildChatTranscript({
   }
 
   // 格式化时间
-  String formattedTime = '';
-  if (datetime.isNotEmpty) {
-    try {
-      final dt = DateTime.parse(datetime);
-      formattedTime = DateFormat('MM-dd HH:mm').format(dt.toLocal());
-    } catch (_) {
-      formattedTime = datetime;
-    }
-  }
+  final formattedTime = TimeUtils.formatCompactTime(
+    TimeUtils.parseUtcTime(datetime),
+  );
 
   // 检查是否有 details（可折叠线程）
   final detailsElement = element.querySelector(':scope > details');

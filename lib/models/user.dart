@@ -1,3 +1,4 @@
+import '../utils/time_utils.dart';
 import '../utils/url_helper.dart';
 
 /// 用户数据模型
@@ -172,9 +173,9 @@ class User {
       seenNotificationId: json['seen_notification_id'] as int? ?? 0,
       notificationChannelPosition: json['notification_channel_position'] as int? ?? -1,
       status: json['status'] != null ? UserStatus.fromJson(json['status']) : null,
-      lastPostedAt: json['last_posted_at'] != null ? DateTime.tryParse(json['last_posted_at']) : null,
-      lastSeenAt: json['last_seen_at'] != null ? DateTime.tryParse(json['last_seen_at']) : null,
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
+      lastPostedAt: TimeUtils.parseUtcTime(json['last_posted_at'] as String?),
+      lastSeenAt: TimeUtils.parseUtcTime(json['last_seen_at'] as String?),
+      createdAt: TimeUtils.parseUtcTime(json['created_at'] as String?),
       location: json['location'] as String?,
       website: json['website'] as String?,
       websiteName: json['website_name'] as String?,

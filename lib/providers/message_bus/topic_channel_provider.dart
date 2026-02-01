@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/discourse_service.dart';
 import '../../services/message_bus_service.dart';
+import '../../utils/time_utils.dart';
 import '../discourse_providers.dart';
 import 'message_bus_service_provider.dart';
 import 'models.dart';
@@ -26,9 +27,7 @@ class TopicChannelNotifier extends Notifier<TopicChannelState> {
       final type = data['type'] as String?;
       final postId = data['id'] as int?;
       final updatedAtStr = data['updated_at'] as String?;
-      final updatedAt = updatedAtStr != null 
-          ? DateTime.tryParse(updatedAtStr) ?? DateTime.now()
-          : DateTime.now();
+      final updatedAt = TimeUtils.parseUtcTime(updatedAtStr) ?? DateTime.now();
       
       debugPrint('[TopicChannel] 收到消息: type=$type, postId=$postId');
       
@@ -115,9 +114,7 @@ class TopicChannelNotifier extends Notifier<TopicChannelState> {
           final postsCount = data['posts_count'] as int?;
           final likeCount = data['like_count'] as int?;
           final lastPostedAtStr = data['last_posted_at'] as String?;
-          final lastPostedAt = lastPostedAtStr != null 
-              ? DateTime.tryParse(lastPostedAtStr) 
-              : null;
+          final lastPostedAt = TimeUtils.parseUtcTime(lastPostedAtStr);
           
           state = state.copyWith(
             statsUpdate: TopicStatsUpdate(

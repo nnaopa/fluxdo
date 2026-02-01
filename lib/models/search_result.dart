@@ -1,5 +1,6 @@
 /// 搜索结果数据模型
 import '../constants.dart';
+import '../utils/time_utils.dart';
 
 /// 搜索结果响应
 class SearchResult {
@@ -83,7 +84,7 @@ class SearchPost {
       id: json['id'] as int,
       username: json['username'] as String? ?? '',
       avatarTemplate: json['avatar_template'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+      createdAt: TimeUtils.parseUtcTime(json['created_at'] as String?) ??
           DateTime.now(),
       likeCount: json['like_count'] as int? ?? 0,
       blurb: json['blurb'] as String? ?? '',

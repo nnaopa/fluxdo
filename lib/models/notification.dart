@@ -1,3 +1,5 @@
+import '../utils/time_utils.dart';
+
 /// Discourse 通知类型枚举
 enum NotificationType {
   mentioned(1, '提及'),
@@ -152,7 +154,7 @@ class DiscourseNotification {
       notificationType: NotificationType.fromId(json['notification_type'] as int),
       read: json['read'] as bool? ?? false,
       highPriority: json['high_priority'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: TimeUtils.parseUtcTime(json['created_at'] as String?) ?? DateTime.now(),
       postNumber: json['post_number'] as int?,
       topicId: json['topic_id'] as int?,
       slug: json['slug'] as String?,

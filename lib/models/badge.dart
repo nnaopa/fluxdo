@@ -1,3 +1,5 @@
+import '../utils/time_utils.dart';
+
 /// 徽章类型
 enum BadgeType {
   gold(1, '金牌'),
@@ -110,7 +112,7 @@ class UserBadge {
       id: json['id'] as int,
       badgeId: json['badge_id'] as int,
       userId: json['user_id'] as int? ?? 0,
-      grantedAt: DateTime.parse(json['granted_at'] as String),
+      grantedAt: TimeUtils.parseUtcTime(json['granted_at'] as String?) ?? DateTime.now(),
       grantedByUsername: json['granted_by_username'] as String?,
       postId: json['post_id'] as int?,
       postNumber: json['post_number'] as int?,

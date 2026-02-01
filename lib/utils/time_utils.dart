@@ -61,4 +61,14 @@ class TimeUtils {
 
     return '${time.year}年${time.month}月${time.day}日';
   }
+
+  /// 格式化时间为紧凑格式
+  /// 格式：01-15 14:30
+  /// 适用于聊天引用等空间有限的场景
+  static String formatCompactTime(DateTime? time) {
+    if (time == null) return '';
+
+    final formatter = DateFormat('MM-dd HH:mm');
+    return formatter.format(time);
+  }
 }
