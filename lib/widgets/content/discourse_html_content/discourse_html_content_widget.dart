@@ -19,6 +19,7 @@ import 'builders/details_builder.dart';
 import 'builders/footnote_builder.dart';
 import 'builders/poll_builder.dart';
 import 'builders/math_builder.dart';
+import 'builders/chat_transcript_builder.dart';
 
 /// Discourse HTML 内容渲染 Widget
 /// 封装了所有自定义渲染逻辑
@@ -408,6 +409,16 @@ class _DiscourseHtmlContentState extends State<DiscourseHtmlContent> {
         theme: theme,
         element: element,
         linkCounts: widget.linkCounts,
+      );
+    }
+
+    // 处理 Discourse Chat Transcript (div.chat-transcript)
+    if (isChatTranscript(element)) {
+      return buildChatTranscript(
+        context: context,
+        theme: theme,
+        element: element,
+        htmlBuilder: htmlBuilder,
       );
     }
 

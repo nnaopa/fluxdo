@@ -43,6 +43,8 @@ class RedirectInterceptor extends Interceptor {
             ..remove('cookie')
             ..remove('Cookie'),
           extra: response.requestOptions.extra,
+          responseType: response.requestOptions.responseType,
+          validateStatus: response.requestOptions.validateStatus,
         );
 
         try {
