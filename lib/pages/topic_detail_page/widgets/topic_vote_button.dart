@@ -113,8 +113,9 @@ class _TopicVoteButtonState extends ConsumerState<TopicVoteButton> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('操作失败: $e')),
+          SnackBar(content: Text(message)),
         );
       }
     }

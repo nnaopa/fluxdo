@@ -21,17 +21,12 @@ class AppConstants {
     _uaInitialized = true;
 
     try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        // 获取 WebView 的真实 UA
-        final webViewUA = await InAppWebViewController.getDefaultUserAgent();
-        // 移除 "; wv)" 标识，使其看起来像普通浏览器
-        _cachedUserAgent = _sanitizeUserAgent(webViewUA);
-        debugPrint('[AppConstants] WebView UA: $webViewUA');
-        debugPrint('[AppConstants] Sanitized UA: $_cachedUserAgent');
-      } else {
-        // 桌面平台使用默认值
-        _cachedUserAgent = _buildDefaultUserAgent();
-      }
+      // 所有平台都尝试获取 WebView 的真实 UA，确保 UA 与 WebView 能力匹配
+      final webViewUA = await InAppWebViewController.getDefaultUserAgent();
+      // 移除 "; wv)" 标识，使其看起来像普通浏览器
+      _cachedUserAgent = _sanitizeUserAgent(webViewUA);
+      debugPrint('[AppConstants] WebView UA: $webViewUA');
+      debugPrint('[AppConstants] Sanitized UA: $_cachedUserAgent');
     } catch (e) {
       debugPrint('[AppConstants] 获取 WebView UA 失败: $e');
       // 降级到默认值

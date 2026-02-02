@@ -164,25 +164,33 @@ class _PostItemState extends ConsumerState<PostItem> {
   /// 点赞（使用 heart 回应）或取消当前回应
   Future<void> _toggleLike() async {
     if (_isLiking) return;
-    
+
     // 震动反馈
     HapticFeedback.lightImpact();
-    
+
     setState(() => _isLiking = true);
 
-    // 如果已有回应，取消当前回应；否则添加 heart
-    final reactionId = _currentUserReaction?.id ?? 'heart';
-    final result = await _service.toggleReaction(widget.post.id, reactionId);
-    if (mounted && result != null) {
-      setState(() {
-        _reactions = result['reactions'] as List<PostReaction>;
-        _currentUserReaction = result['currentUserReaction'] as PostReaction?;
-      });
+    try {
+      // 如果已有回应，取消当前回应；否则添加 heart
+      final reactionId = _currentUserReaction?.id ?? 'heart';
+      final result = await _service.toggleReaction(widget.post.id, reactionId);
+      if (mounted) {
+        setState(() {
+          _reactions = result['reactions'] as List<PostReaction>;
+          _currentUserReaction = result['currentUserReaction'] as PostReaction?;
+        });
 
-      // 同步更新 Provider 状态
-      _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
+        // 同步更新 Provider 状态
+        _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
+        _showSnackBar(message);
+      }
+    } finally {
+      if (mounted) setState(() => _isLiking = false);
     }
-    if (mounted) setState(() => _isLiking = false);
   }
 
   /// 显示回应选择器
@@ -340,16 +348,23 @@ class _PostItemState extends ConsumerState<PostItem> {
 
   /// 切换回应
   Future<void> _toggleReaction(String reactionId) async {
-    final result = await _service.toggleReaction(widget.post.id, reactionId);
-    if (!mounted || result == null) return;
+    try {
+      final result = await _service.toggleReaction(widget.post.id, reactionId);
+      if (!mounted) return;
 
-    setState(() {
-      _reactions = result['reactions'] as List<PostReaction>;
-      _currentUserReaction = result['currentUserReaction'] as PostReaction?;
-    });
+      setState(() {
+        _reactions = result['reactions'] as List<PostReaction>;
+        _currentUserReaction = result['currentUserReaction'] as PostReaction?;
+      });
 
-    // 同步更新 Provider 状态
-    _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
+      // 同步更新 Provider 状态
+      _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
+    } catch (e) {
+      if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
+        _showSnackBar(message);
+      }
+    }
   }
 
   /// 切换回复历史显示（点击后先加载，加载完成再显示）
@@ -458,15 +473,13 @@ class _PostItemState extends ConsumerState<PostItem> {
         // 取消书签 - 优先使用本地保存的 ID，否则使用 Post 模型中的 ID
         final bookmarkId = _bookmarkId ?? widget.post.bookmarkId;
         if (bookmarkId != null) {
-          final success = await _service.deleteBookmark(bookmarkId);
-          if (mounted && success) {
+          await _service.deleteBookmark(bookmarkId);
+          if (mounted) {
             setState(() {
               _isBookmarked = false;
               _bookmarkId = null;
             });
             _showSnackBar('已取消书签');
-          } else if (mounted) {
-            _showSnackBar('取消书签失败');
           }
         } else {
           _showSnackBar('无法取消书签：缺少书签 ID');
@@ -474,19 +487,18 @@ class _PostItemState extends ConsumerState<PostItem> {
       } else {
         // 添加书签
         final bookmarkId = await _service.bookmarkPost(widget.post.id);
-        if (mounted && bookmarkId != null) {
+        if (mounted) {
           setState(() {
             _isBookmarked = true;
             _bookmarkId = bookmarkId; // 保存书签 ID
           });
           _showSnackBar('已添加书签');
-        } else if (mounted) {
-          _showSnackBar('添加书签失败');
         }
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('操作失败');
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
+        _showSnackBar(message);
       }
     } finally {
       if (mounted) {
@@ -505,28 +517,25 @@ class _PostItemState extends ConsumerState<PostItem> {
     try {
       if (_isAcceptedAnswer) {
         // 取消采纳
-        final success = await _service.unacceptAnswer(widget.post.id);
-        if (mounted && success) {
+        await _service.unacceptAnswer(widget.post.id);
+        if (mounted) {
           setState(() => _isAcceptedAnswer = false);
           widget.onSolutionChanged?.call(widget.post.id, false);
           _showSnackBar('已取消采纳');
-        } else if (mounted) {
-          _showSnackBar('取消采纳失败');
         }
       } else {
         // 采纳答案
-        final result = await _service.acceptAnswer(widget.post.id);
-        if (mounted && result != null) {
+        await _service.acceptAnswer(widget.post.id);
+        if (mounted) {
           setState(() => _isAcceptedAnswer = true);
           widget.onSolutionChanged?.call(widget.post.id, true);
           _showSnackBar('已采纳为解决方案');
-        } else if (mounted) {
-          _showSnackBar('采纳失败');
         }
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('操作失败');
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
+        _showSnackBar(message);
       }
     } finally {
       if (mounted) {
@@ -570,17 +579,16 @@ class _PostItemState extends ConsumerState<PostItem> {
     setState(() => _isDeleting = true);
 
     try {
-      final success = await _service.deletePost(widget.post.id);
-      if (mounted && success) {
+      await _service.deletePost(widget.post.id);
+      if (mounted) {
         _showSnackBar('已删除');
         // 通知父组件刷新帖子状态
         _refreshPostInProvider();
-      } else if (mounted) {
-        _showSnackBar('删除失败');
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('删除失败');
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '删除失败';
+        _showSnackBar(message);
       }
     } finally {
       if (mounted) {
@@ -597,17 +605,16 @@ class _PostItemState extends ConsumerState<PostItem> {
     setState(() => _isDeleting = true);
 
     try {
-      final success = await _service.recoverPost(widget.post.id);
-      if (mounted && success) {
+      await _service.recoverPost(widget.post.id);
+      if (mounted) {
         _showSnackBar('已恢复');
         // 通知父组件刷新帖子状态
         _refreshPostInProvider();
-      } else if (mounted) {
-        _showSnackBar('恢复失败');
       }
     } catch (e) {
       if (mounted) {
-        _showSnackBar('恢复失败');
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '恢复失败';
+        _showSnackBar(message);
       }
     } finally {
       if (mounted) {
@@ -1765,21 +1772,27 @@ class _FlagBottomSheetState extends State<_FlagBottomSheet> {
 
     setState(() => _isSubmitting = true);
 
-    final success = await widget.service.flagPost(
-      widget.postId,
-      _selectedType!.id,
-      message: _messageController.text.isNotEmpty ? _messageController.text : null,
-    );
+    try {
+      await widget.service.flagPost(
+        widget.postId,
+        _selectedType!.id,
+        message: _messageController.text.isNotEmpty ? _messageController.text : null,
+      );
 
-    if (mounted) {
-      setState(() => _isSubmitting = false);
-      if (success) {
+      if (mounted) {
         Navigator.pop(context);
         widget.onSuccess?.call();
-      } else {
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '举报失败，请稍后重试';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('举报失败，请稍后重试')),
+          SnackBar(content: Text(message)),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
       }
     }
   }

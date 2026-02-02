@@ -131,14 +131,23 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
 
     try {
       final service = ref.read(discourseServiceProvider);
-      final success = _isFollowed
-          ? await service.unfollowUser(_user!.username)
-          : await service.followUser(_user!.username);
+      if (_isFollowed) {
+        await service.unfollowUser(_user!.username);
+      } else {
+        await service.followUser(_user!.username);
+      }
 
-      if (mounted && success) {
+      if (mounted) {
         setState(() {
           _isFollowed = !_isFollowed;
         });
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
       }
     } finally {
       if (mounted) {

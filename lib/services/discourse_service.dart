@@ -914,6 +914,19 @@ class DiscourseService {
     return SearchResult.fromJson(response.data);
   }
 
+  /// 获取最近搜索记录
+  /// 返回用户最近的搜索关键词列表
+  Future<List<String>> getRecentSearches() async {
+    try {
+      final response = await _dio.get('/u/recent-searches.json');
+      final List<dynamic> searches = response.data['recent_searches'] ?? [];
+      return searches.cast<String>();
+    } catch (e) {
+      // 如果接口调用失败，返回空列表
+      return [];
+    }
+  }
+
   /// 获取用户浏览历史 (read topics)
   Future<TopicListResponse> getBrowsingHistory({int page = 0}) async {
     final response = await _dio.get(
@@ -1253,57 +1266,48 @@ class DiscourseService {
 
 
   /// 点赞帖子
-  /// 返回 true 表示成功
-  Future<bool> likePost(int postId) async {
+  Future<void> likePost(int postId) async {
     try {
       await _dio.post(
         '/post_actions',
         data: {'id': postId, 'post_action_type_id': 2},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      return true;
-    } catch (e) {
-      print('[DiscourseService] likePost failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 取消点赞
-  Future<bool> unlikePost(int postId) async {
+  Future<void> unlikePost(int postId) async {
     try {
       await _dio.delete(
         '/post_actions/$postId',
         queryParameters: {'post_action_type_id': 2},
       );
-      return true;
-    } catch (e) {
-      print('[DiscourseService] unlikePost failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 切换回应（添加/移除表情）
   /// 返回更新后的数据 {reactions, currentUserReaction}
-  Future<Map<String, dynamic>?> toggleReaction(int postId, String reaction) async {
+  Future<Map<String, dynamic>> toggleReaction(int postId, String reaction) async {
     try {
       final response = await _dio.put(
         '/discourse-reactions/posts/$postId/custom-reactions/$reaction/toggle.json',
       );
-      final data = response.data as Map<String, dynamic>?;
-      if (data != null) {
-        return {
-          'reactions': (data['reactions'] as List?)
-              ?.map((e) => PostReaction.fromJson(e as Map<String, dynamic>))
-              .toList() ?? [],
-          'currentUserReaction': data['current_user_reaction'] != null
-              ? PostReaction.fromJson(data['current_user_reaction'] as Map<String, dynamic>)
-              : null,
-        };
-      }
-      return null;
-    } catch (e) {
-      print('[DiscourseService] toggleReaction failed: $e');
-      return null;
+      final data = response.data as Map<String, dynamic>;
+      return {
+        'reactions': (data['reactions'] as List?)
+            ?.map((e) => PostReaction.fromJson(e as Map<String, dynamic>))
+            .toList() ?? [],
+        'currentUserReaction': data['current_user_reaction'] != null
+            ? PostReaction.fromJson(data['current_user_reaction'] as Map<String, dynamic>)
+            : null,
+      };
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1365,6 +1369,17 @@ class DiscourseService {
       return Exception('HTTP $statusCode: $errorMessage');
     }
     return Exception(error.message ?? 'Unknown Dio error');
+  }
+
+  /// 从 DioException 中提取 Discourse API 错误消息并抛出
+  Never _throwApiError(DioException e) {
+    if (e.response?.data is Map) {
+      final data = e.response!.data as Map;
+      if (data['errors'] != null && data['errors'] is List) {
+        throw Exception((data['errors'] as List).join('\n'));
+      }
+    }
+    throw e;
   }
 
   // URL 缓存
@@ -1508,26 +1523,20 @@ class DiscourseService {
   }
 
   /// 关注用户 (discourse-follow 插件)
-  /// 返回 true 表示成功
-  Future<bool> followUser(String username) async {
+  Future<void> followUser(String username) async {
     try {
       await _dio.put('/follow/$username');
-      return true;
-    } catch (e) {
-      print('[DiscourseService] followUser failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 取消关注用户 (discourse-follow 插件)
-  /// 返回 true 表示成功
-  Future<bool> unfollowUser(String username) async {
+  Future<void> unfollowUser(String username) async {
     try {
       await _dio.delete('/follow/$username');
-      return true;
-    } catch (e) {
-      print('[DiscourseService] unfollowUser failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1535,8 +1544,8 @@ class DiscourseService {
   /// [postId] 帖子 ID
   /// [name] 书签名称（可选）
   /// [reminderAt] 提醒时间（可选）
-  /// 返回书签 ID，失败返回 null
-  Future<int?> bookmarkPost(int postId, {String? name, DateTime? reminderAt}) async {
+  /// 返回书签 ID
+  Future<int> bookmarkPost(int postId, {String? name, DateTime? reminderAt}) async {
     try {
       final data = <String, dynamic>{
         'bookmarkable_id': postId,
@@ -1559,23 +1568,19 @@ class DiscourseService {
       if (respData is Map && respData['id'] != null) {
         return respData['id'] as int;
       }
-      return null;
-    } catch (e) {
-      print('[DiscourseService] bookmarkPost failed: $e');
-      return null;
+      throw Exception('添加书签失败：响应格式异常');
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 删除书签
   /// [bookmarkId] 书签 ID
-  /// 返回 true 表示成功
-  Future<bool> deleteBookmark(int bookmarkId) async {
+  Future<void> deleteBookmark(int bookmarkId) async {
     try {
       await _dio.delete('/bookmarks/$bookmarkId.json');
-      return true;
-    } catch (e) {
-      print('[DiscourseService] deleteBookmark failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1583,8 +1588,7 @@ class DiscourseService {
   /// [postId] 帖子 ID
   /// [flagTypeId] 举报类型 ID (3=离题, 4=不当内容, 7=通知版主, 8=垃圾信息)
   /// [message] 举报说明（可选，通知版主时建议填写）
-  /// 返回 true 表示成功
-  Future<bool> flagPost(int postId, int flagTypeId, {String? message}) async {
+  Future<void> flagPost(int postId, int flagTypeId, {String? message}) async {
     try {
       final data = <String, dynamic>{
         'id': postId,
@@ -1599,10 +1603,8 @@ class DiscourseService {
         data: data,
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      return true;
-    } catch (e) {
-      print('[DiscourseService] flagPost failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1652,9 +1654,8 @@ class DiscourseService {
         return Poll.fromJson(response.data['poll'] as Map<String, dynamic>);
       }
       return null;
-    } catch (e) {
-      print('[DiscourseService] votePoll failed: $e');
-      rethrow;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1677,9 +1678,8 @@ class DiscourseService {
         return Poll.fromJson(response.data['poll'] as Map<String, dynamic>);
       }
       return null;
-    } catch (e) {
-      print('[DiscourseService] removeVote failed: $e');
-      rethrow;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1694,9 +1694,8 @@ class DiscourseService {
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
       return VoteResponse.fromJson(response.data as Map<String, dynamic>);
-    } catch (e) {
-      print('[DiscourseService] voteTopicVote failed: $e');
-      rethrow;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1711,9 +1710,8 @@ class DiscourseService {
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
       return VoteResponse.fromJson(response.data as Map<String, dynamic>);
-    } catch (e) {
-      print('[DiscourseService] unvoteTopicVote failed: $e');
-      rethrow;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
@@ -1749,16 +1747,20 @@ class DiscourseService {
     int? categoryId,
     List<String>? tags,
   }) async {
-    final data = <String, dynamic>{};
-    if (title != null) data['title'] = title;
-    if (categoryId != null) data['category_id'] = categoryId;
-    if (tags != null) data['tags[]'] = tags;
+    try {
+      final data = <String, dynamic>{};
+      if (title != null) data['title'] = title;
+      if (categoryId != null) data['category_id'] = categoryId;
+      if (tags != null) data['tags[]'] = tags;
 
-    await _dio.put(
-      '/t/-/$topicId.json',
-      data: data,
-      options: Options(contentType: Headers.formUrlEncodedContentType),
-    );
+      await _dio.put(
+        '/t/-/$topicId.json',
+        data: data,
+        options: Options(contentType: Headers.formUrlEncodedContentType),
+      );
+    } on DioException catch (e) {
+      _throwApiError(e);
+    }
   }
 
   /// 获取帖子原始内容（Markdown）
@@ -1779,8 +1781,8 @@ class DiscourseService {
   /// [postId] 帖子 ID
   /// [raw] 新的 Markdown 内容
   /// [editReason] 编辑理由（可选）
-  /// 返回更新后的 Post 对象，失败返回 null
-  Future<Post?> updatePost({
+  /// 返回更新后的 Post 对象
+  Future<Post> updatePost({
     required int postId,
     required String raw,
     String? editReason,
@@ -1803,15 +1805,9 @@ class DiscourseService {
       if (respData is Map && respData['post'] != null) {
         return Post.fromJson(respData['post'] as Map<String, dynamic>);
       }
-      return null;
+      throw Exception('更新帖子失败：响应格式异常');
     } on DioException catch (e) {
-      if (e.response?.data != null && e.response!.data is Map) {
-        final data = e.response!.data as Map;
-        if (data['errors'] != null) {
-          throw Exception((data['errors'] as List).join('\n'));
-        }
-      }
-      rethrow;
+      _throwApiError(e);
     }
   }
 
@@ -1847,64 +1843,54 @@ class DiscourseService {
   /// 接受答案（标记帖子为问题的解决方案）
   ///
   /// [postId] 帖子 ID
-  /// 返回接受答案的信息，失败返回 null
-  Future<Map<String, dynamic>?> acceptAnswer(int postId) async {
+  /// 返回接受答案的信息
+  Future<Map<String, dynamic>> acceptAnswer(int postId) async {
     try {
       final response = await _dio.post(
         '/solution/accept',
         data: {'id': postId},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      return response.data as Map<String, dynamic>?;
-    } catch (e) {
-      print('[DiscourseService] acceptAnswer failed: $e');
-      return null;
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 取消接受答案
   ///
   /// [postId] 帖子 ID
-  /// 返回 true 表示成功
-  Future<bool> unacceptAnswer(int postId) async {
+  Future<void> unacceptAnswer(int postId) async {
     try {
       await _dio.post(
         '/solution/unaccept',
         data: {'id': postId},
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
-      return true;
-    } catch (e) {
-      print('[DiscourseService] unacceptAnswer failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 删除帖子
   ///
   /// [postId] 帖子 ID
-  /// 返回 true 表示成功
-  Future<bool> deletePost(int postId) async {
+  Future<void> deletePost(int postId) async {
     try {
       await _dio.delete('/posts/$postId.json');
-      return true;
-    } catch (e) {
-      print('[DiscourseService] deletePost failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 
   /// 恢复已删除的帖子
   ///
   /// [postId] 帖子 ID
-  /// 返回 true 表示成功
-  Future<bool> recoverPost(int postId) async {
+  Future<void> recoverPost(int postId) async {
     try {
       await _dio.put('/posts/$postId/recover.json');
-      return true;
-    } catch (e) {
-      print('[DiscourseService] recoverPost failed: $e');
-      return false;
+    } on DioException catch (e) {
+      _throwApiError(e);
     }
   }
 }

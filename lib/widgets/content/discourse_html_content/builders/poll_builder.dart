@@ -154,8 +154,9 @@ class _PollWidgetState extends State<_PollWidget> {
       }
     } catch (e) {
       if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '投票失败';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('投票失败: $e')),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {
@@ -184,8 +185,9 @@ class _PollWidgetState extends State<_PollWidget> {
       }
     } catch (e) {
       if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '投票失败';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('投票失败: $e')),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {
@@ -214,8 +216,9 @@ class _PollWidgetState extends State<_PollWidget> {
       }
     } catch (e) {
       if (mounted) {
+        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '撤销投票失败';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('撤销投票失败: $e')),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {

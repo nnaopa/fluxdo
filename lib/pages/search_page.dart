@@ -52,6 +52,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   bool _hasError = false;
   String _errorMessage = '';
 
+  // 最近搜索记录
+  List<String> _recentSearches = [];
+  bool _isLoadingRecentSearches = true;
+
   @override
   void initState() {
     super.initState();
@@ -64,9 +68,30 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _focusNode.requestFocus();
+        _loadRecentSearches();
       });
     }
     _scrollController.addListener(_onScroll);
+  }
+
+  /// 加载最近搜索记录
+  Future<void> _loadRecentSearches() async {
+    try {
+      final service = ref.read(discourseServiceProvider);
+      final searches = await service.getRecentSearches();
+      if (mounted) {
+        setState(() {
+          _recentSearches = searches;
+          _isLoadingRecentSearches = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingRecentSearches = false;
+        });
+      }
+    }
   }
 
   @override
@@ -194,7 +219,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           textAlignVertical: TextAlignVertical.center,
           style: Theme.of(context).textTheme.bodyLarge,
           decoration: InputDecoration(
-            hintText: '搜索话题、用户...',
+            hintText: '搜索 @用户 #分类 tags:标签',
             border: InputBorder.none,
             isDense: true,
             contentPadding:
@@ -225,6 +250,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    // 正在加载最近搜索记录
+    if (_isLoadingRecentSearches) {
+      return const Center(child: LoadingSpinner());
+    }
+
+    // 有最近搜索记录时显示记录列表
+    if (_recentSearches.isNotEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 最近搜索标题
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '最近搜索',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          // 搜索记录列表
+          ..._recentSearches.map((query) => _buildRecentSearchItem(query, theme)),
+        ],
+      );
+    }
+
+    // 默认空状态
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -241,14 +294,46 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '支持 @用户名  #分类  tags:标签 等语法',
-            style: theme.textTheme.bodySmall?.copyWith(
+        ],
+      ),
+    );
+  }
+
+  /// 构建最近搜索项
+  Widget _buildRecentSearchItem(String query, ThemeData theme) {
+    return InkWell(
+      onTap: () {
+        _searchController.text = query;
+        _onSearch(query);
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.history,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                query,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              Icons.north_west,
+              size: 16,
               color: theme.colorScheme.outline,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
