@@ -7,6 +7,7 @@ import 'topic_detail_page/topic_detail_page.dart';
 import 'user_profile_page.dart';
 import 'badge_page.dart';
 import '../services/discourse_cache_manager.dart';
+import '../widgets/common/emoji_text.dart';
 import '../widgets/notification/notification_list_skeleton.dart';
 import '../utils/time_utils.dart';
 
@@ -291,6 +292,9 @@ class _NotificationItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final iconColor = _getNotificationColor(context);
+    final titleStyle = TextStyle(
+      fontWeight: notification.read ? FontWeight.normal : FontWeight.w600,
+    );
 
     return ListTile(
       leading: SizedBox(
@@ -349,13 +353,17 @@ class _NotificationItem extends StatelessWidget {
           ],
         ),
       ),
-      title: Text(
-        notification.title,
+      title: Text.rich(
+        TextSpan(
+          children: EmojiText.buildEmojiSpans(
+            context,
+            notification.title,
+            titleStyle,
+          ),
+        ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: notification.read ? FontWeight.normal : FontWeight.w600,
-        ),
+        style: titleStyle,
       ),
       subtitle: Row(
         children: [
