@@ -188,14 +188,8 @@ class _CreateTopicPageState extends ConsumerState<CreateTopicPage> {
 
       if (!mounted) return;
       Navigator.of(context).pop(topicId);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('创建失败: ${e.toString().replaceAll('Exception: ', '')}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

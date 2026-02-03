@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/topic.dart';
-import '../../../services/discourse_service.dart';
 import '../../../providers/discourse_providers.dart';
+import '../../../services/discourse/discourse_service.dart';
 
 /// 话题投票按钮组件
 class TopicVoteButton extends ConsumerStatefulWidget {
@@ -110,13 +110,10 @@ class _TopicVoteButtonState extends ConsumerState<TopicVoteButton> {
           );
         }
       }
-    } catch (e) {
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
       if (mounted) {
         setState(() => _isLoading = false);
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
       }
     }
   }

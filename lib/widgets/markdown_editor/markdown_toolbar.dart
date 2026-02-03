@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../services/discourse_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import 'emoji_picker.dart';
 import 'image_upload_dialog.dart';
 import 'link_insert_dialog.dart';
@@ -428,11 +428,8 @@ class MarkdownToolbarState extends State<MarkdownToolbar> with WidgetsBindingObs
 
       if (!mounted) return;
       insertText('![${result.originalName}]($url)\n');
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('上传失败: $e'), backgroundColor: Colors.red),
-      );
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isUploading = false);

@@ -6,14 +6,15 @@ import 'pages/topics_screen.dart';
 import 'pages/profile_page.dart';
 import 'providers/discourse_providers.dart';
 import 'providers/message_bus_providers.dart';
+import 'services/discourse/discourse_service.dart';
 import 'providers/app_state_refresher.dart';
 import 'services/discourse_cache_manager.dart';
 import 'services/highlighter_service.dart';
-import 'services/discourse_service.dart';
 import 'services/network/cookie/cookie_sync_service.dart';
 import 'services/network/cookie/cookie_jar_service.dart';
 import 'services/network/adapters/cronet_fallback_service.dart';
 import 'services/local_notification_service.dart';
+import 'services/toast_service.dart';
 import 'services/preloaded_data_service.dart';
 import 'services/network/doh/network_settings_service.dart';
 import 'services/network/doh_proxy/proxy_certificate.dart';
@@ -108,6 +109,7 @@ class MainApp extends ConsumerWidget {
 
         return MaterialApp(
           navigatorKey: navigatorKey,
+          scaffoldMessengerKey: scaffoldMessengerKey,
           title: 'FluxDO',
           // 配置中文本地化
           locale: const Locale('zh', 'CN'),

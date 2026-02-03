@@ -55,6 +55,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   // 最近搜索记录
   List<String> _recentSearches = [];
   bool _isLoadingRecentSearches = true;
+  bool _isClearingRecentSearches = false;
 
   @override
   void initState() {
@@ -90,6 +91,27 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         setState(() {
           _isLoadingRecentSearches = false;
         });
+      }
+    }
+  }
+
+  /// 清空最近搜索记录
+  Future<void> _clearRecentSearches() async {
+    if (_isClearingRecentSearches) return;
+    setState(() => _isClearingRecentSearches = true);
+    try {
+      final service = ref.read(discourseServiceProvider);
+      await service.clearRecentSearches();
+      if (mounted) {
+        setState(() {
+          _recentSearches = [];
+          _isClearingRecentSearches = false;
+        });
+      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
+      if (mounted) {
+        setState(() => _isClearingRecentSearches = false);
       }
     }
   }
@@ -260,15 +282,38 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 最近搜索标题
+          // 最近搜索标题行
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              '最近搜索',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '最近搜索',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _isClearingRecentSearches ? null : _clearRecentSearches,
+                  child: _isClearingRecentSearches
+                      ? SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.primary,
+                          ),
+                        )
+                      : Text(
+                          '清空',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                ),
+              ],
             ),
           ),
           // 搜索记录列表

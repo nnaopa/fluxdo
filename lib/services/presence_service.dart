@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'discourse_service.dart';
+import 'discourse/discourse_service.dart';
 
 /// Presence 状态管理服务
 /// 用于在用户输入回复时通知服务器"正在输入"状态

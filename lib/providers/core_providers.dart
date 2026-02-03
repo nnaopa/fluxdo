@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
-import '../services/discourse_service.dart';
+import '../services/discourse/discourse_service.dart';
 import '../services/preloaded_data_service.dart';
 
 /// Discourse 服务 Provider

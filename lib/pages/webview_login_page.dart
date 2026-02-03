@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../services/discourse_service.dart';
+import '../services/discourse/discourse_service.dart';
 import '../services/preloaded_data_service.dart';
 import '../services/network/cookie/cookie_jar_service.dart';
 import '../services/network/cookie/cookie_sync_service.dart';

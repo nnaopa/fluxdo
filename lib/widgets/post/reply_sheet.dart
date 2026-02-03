@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../markdown_editor/markdown_editor.dart';
 import '../../models/topic.dart';
-import '../../services/discourse_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../../services/presence_service.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../services/emoji_handler.dart';
@@ -216,9 +216,8 @@ class _ReplySheetState extends ConsumerState<ReplySheet> {
         if (!mounted) return;
         Navigator.of(context).pop(newPost);
       }
-    } catch (e) {
-      if (!mounted) return;
-      _showError('${_isEditMode ? '保存' : '发送'}失败: ${e.toString().replaceAll('Exception: ', '')}');
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:fluxdo/models/tag_search_result.dart';
-import 'package:fluxdo/services/discourse_service.dart';
+import 'package:fluxdo/services/discourse/discourse_service.dart';
 
 class TagSelectionSheet extends StatefulWidget {
   /// 分类 ID（用于联动过滤标签）

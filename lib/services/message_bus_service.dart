@@ -223,6 +223,7 @@ class MessageBusService {
           options: Options(
             contentType: Headers.formUrlEncodedContentType,
             responseType: ResponseType.stream,
+            extra: {'isSilent': true},
           ),
         );
         

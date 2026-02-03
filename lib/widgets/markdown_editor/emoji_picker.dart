@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/emoji.dart';
-import '../../services/discourse_service.dart';
 import '../../providers/discourse_providers.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../content/discourse_image.dart';
 import '../common/loading_spinner.dart';
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../models/topic.dart';
-import '../../../../services/discourse_service.dart';
+import '../../../../services/discourse/discourse_service.dart';
 
 /// 构建投票块
 Widget buildPoll({
@@ -151,13 +151,8 @@ class _PollWidgetState extends State<_PollWidget> {
         });
         widget.onPollUpdated(result, votesToSubmit);
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '投票失败';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isVoting = false);
     }
@@ -182,13 +177,8 @@ class _PollWidgetState extends State<_PollWidget> {
         });
         widget.onPollUpdated(result, _userVotes);
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '投票失败';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isVoting = false);
     }
@@ -213,13 +203,8 @@ class _PollWidgetState extends State<_PollWidget> {
         });
         widget.onPollUpdated(result, []);
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '撤销投票失败';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isVoting = false);
     }

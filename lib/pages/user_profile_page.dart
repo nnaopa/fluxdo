@@ -142,13 +142,8 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage>
           _isFollowed = !_isFollowed;
         });
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isFollowLoading = false);

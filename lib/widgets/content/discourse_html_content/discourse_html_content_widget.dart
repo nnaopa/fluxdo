@@ -8,7 +8,7 @@ import '../../../models/topic.dart';
 import '../../../pages/user_profile_page.dart';
 import '../../../pages/webview_page.dart';
 import '../../../providers/preferences_provider.dart';
-import '../../../services/discourse_service.dart';
+import '../../../services/discourse/discourse_service.dart';
 import '../../../services/emoji_handler.dart';
 import '../../../utils/url_helper.dart';
 import 'discourse_widget_factory.dart';

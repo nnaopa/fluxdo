@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/discourse_service.dart';
 import '../../services/message_bus_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../../utils/time_utils.dart';
 import '../discourse_providers.dart';
 import 'message_bus_service_provider.dart';

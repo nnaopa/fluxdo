@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'discourse_service.dart';
+import 'discourse/discourse_service.dart';
 import '../constants.dart';
 import '../utils/url_helper.dart';
 

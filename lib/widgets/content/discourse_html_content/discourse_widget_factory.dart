@@ -4,7 +4,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../pages/image_viewer_page.dart';
 import '../../../services/discourse_cache_manager.dart';
-import '../../../services/discourse_service.dart';
+import '../../../services/discourse/discourse_service.dart';
 import 'lazy_image.dart';
 
 /// 自定义 WidgetFactory，仅用于接管图片渲染

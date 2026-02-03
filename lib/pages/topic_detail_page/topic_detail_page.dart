@@ -13,7 +13,7 @@ import '../../providers/preferences_provider.dart';
 import '../../providers/selected_topic_provider.dart';
 import '../../providers/discourse_providers.dart';
 import '../../providers/message_bus_providers.dart';
-import '../../services/discourse_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../../services/screen_track.dart';
 import '../../widgets/content/lazy_load_scope.dart';
 import '../../widgets/post/post_item_skeleton.dart';
@@ -722,12 +722,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
           SnackBar(content: Text('已设置为${level.label}')),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设置失败: $e')),
-        );
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     }
   }
 

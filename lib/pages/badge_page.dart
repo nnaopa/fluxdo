@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide Badge;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/badge.dart';
-import '../services/discourse_service.dart';
+import '../services/discourse/discourse_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/font_awesome_map.dart';
 import '../services/discourse_cache_manager.dart';

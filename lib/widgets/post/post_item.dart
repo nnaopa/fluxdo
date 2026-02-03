@@ -9,8 +9,8 @@ import '../../models/topic.dart';
 import '../../pages/topic_detail_page/topic_detail_page.dart';
 import '../../pages/user_profile_page.dart';
 import '../../providers/discourse_providers.dart';
-import '../../services/discourse_service.dart';
 import '../../services/preloaded_data_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../services/emoji_handler.dart';
 import '../../utils/time_utils.dart';
@@ -197,11 +197,8 @@ class _PostItemState extends ConsumerState<PostItem> {
         // 同步更新 Provider 状态
         _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isLiking = false);
     }
@@ -375,11 +372,8 @@ class _PostItemState extends ConsumerState<PostItem> {
 
       // 同步更新 Provider 状态
       _syncReactionToProvider(result['reactions'] as List<PostReaction>, result['currentUserReaction'] as PostReaction?);
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     }
   }
 
@@ -505,11 +499,8 @@ class _PostItemState extends ConsumerState<PostItem> {
           _showSnackBar('已添加书签');
         }
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isBookmarking = false);
@@ -542,11 +533,8 @@ class _PostItemState extends ConsumerState<PostItem> {
           _showSnackBar('已采纳为解决方案');
         }
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '操作失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isTogglingAnswer = false);
@@ -595,11 +583,8 @@ class _PostItemState extends ConsumerState<PostItem> {
         // 通知父组件刷新帖子状态
         _refreshPostInProvider();
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '删除失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isDeleting = false);
@@ -621,11 +606,8 @@ class _PostItemState extends ConsumerState<PostItem> {
         // 通知父组件刷新帖子状态
         _refreshPostInProvider();
       }
-    } catch (e) {
-      if (mounted) {
-        final message = e is Exception ? e.toString().replaceFirst('Exception: ', '') : '恢复失败';
-        _showSnackBar(message);
-      }
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) {
         setState(() => _isDeleting = false);

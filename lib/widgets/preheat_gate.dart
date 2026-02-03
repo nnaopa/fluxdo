@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/preloaded_data_service.dart';
-import '../services/discourse_service.dart';
+import '../services/discourse/discourse_service.dart';
 import '../services/emoji_handler.dart';
 
 class PreheatGate extends StatefulWidget {

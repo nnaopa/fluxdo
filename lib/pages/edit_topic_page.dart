@@ -278,14 +278,8 @@ class _EditTopicPageState extends ConsumerState<EditTopicPage> {
         tags: tagsChanged ? _selectedTags : null,
         updatedFirstPost: updatedPost,
       ));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('保存失败: ${e.toString().replaceAll('Exception: ', '')}'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+    } catch (_) {
+      // 错误已由 ErrorInterceptor 处理
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'discourse_service.dart';
+import 'discourse/discourse_service.dart';
 
 /// 阅读时间上报成功后的回调
 /// [topicId] 话题 ID

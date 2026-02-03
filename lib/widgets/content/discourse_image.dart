@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../services/discourse_service.dart';
+import '../../services/discourse/discourse_service.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../pages/image_viewer_page.dart';
 import '../../utils/svg_utils.dart';
