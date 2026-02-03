@@ -9,6 +9,9 @@ class PostHighlightController extends ChangeNotifier {
   Timer? _highlightTimer;
   bool _skipNextJumpHighlight = false;
 
+  /// 高亮帖子号 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<int?> highlightNotifier = ValueNotifier<int?>(null);
+
   /// 当前高亮的帖子号
   int? get highlightPostNumber => _highlightPostNumber;
 
@@ -31,12 +34,12 @@ class PostHighlightController extends ChangeNotifier {
   /// 触发高亮效果
   void triggerHighlight(int postNumber) {
     _highlightPostNumber = postNumber;
-    notifyListeners();
+    highlightNotifier.value = postNumber;
 
     _highlightTimer?.cancel();
     _highlightTimer = Timer(const Duration(seconds: 2), () {
       _highlightPostNumber = null;
-      notifyListeners();
+      highlightNotifier.value = null;
     });
   }
 
@@ -45,7 +48,7 @@ class PostHighlightController extends ChangeNotifier {
     _highlightTimer?.cancel();
     _highlightPostNumber = null;
     _pendingHighlightPostNumber = null;
-    notifyListeners();
+    highlightNotifier.value = null;
   }
 
   /// 消费待高亮帖子号并触发高亮
@@ -61,6 +64,7 @@ class PostHighlightController extends ChangeNotifier {
   @override
   void dispose() {
     _highlightTimer?.cancel();
+    highlightNotifier.dispose();
     super.dispose();
   }
 }

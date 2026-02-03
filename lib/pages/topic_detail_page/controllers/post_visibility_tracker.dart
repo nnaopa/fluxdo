@@ -15,6 +15,9 @@ class PostVisibilityTracker extends ChangeNotifier {
   /// 当前可见的最顶部帖子的 stream 索引（1-based）
   int _currentVisibleStreamIndex = 1;
 
+  /// stream 索引 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<int> streamIndexNotifier = ValueNotifier<int>(1);
+
   Timer? _screenTrackThrottleTimer;
   bool _trackEnabled;
 
@@ -85,7 +88,7 @@ class PostVisibilityTracker extends ChangeNotifier {
   void updateStreamIndex(int newIndex) {
     if (newIndex != _currentVisibleStreamIndex) {
       _currentVisibleStreamIndex = newIndex;
-      notifyListeners();
+      streamIndexNotifier.value = newIndex;
     }
   }
 
@@ -106,6 +109,7 @@ class PostVisibilityTracker extends ChangeNotifier {
   @override
   void dispose() {
     _screenTrackThrottleTimer?.cancel();
+    streamIndexNotifier.dispose();
     super.dispose();
   }
 }

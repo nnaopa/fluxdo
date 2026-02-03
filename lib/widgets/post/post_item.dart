@@ -85,13 +85,17 @@ class _PostItemState extends ConsumerState<PostItem> {
 
   // 回复历史（被回复的帖子链）
   List<Post>? _replyHistory;
-  bool _isLoadingReplyHistory = false;
-  bool _showReplyHistory = false;
+  /// 回复历史加载状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> _isLoadingReplyHistoryNotifier = ValueNotifier<bool>(false);
+  /// 回复历史显示状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> _showReplyHistoryNotifier = ValueNotifier<bool>(false);
 
   // 回复列表（回复当前帖子的帖子）
   List<Post> _replies = [];
-  bool _isLoadingReplies = false;
-  bool _showReplies = false;
+  /// 回复列表加载状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> _isLoadingRepliesNotifier = ValueNotifier<bool>(false);
+  /// 回复列表显示状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> _showRepliesNotifier = ValueNotifier<bool>(false);
 
   // 缓存的头像 widget，避免重复创建
   Widget? _cachedAvatarWidget;
@@ -110,6 +114,15 @@ class _PostItemState extends ConsumerState<PostItem> {
   void initState() {
     super.initState();
     _initLikeState();
+  }
+
+  @override
+  void dispose() {
+    _isLoadingReplyHistoryNotifier.dispose();
+    _showReplyHistoryNotifier.dispose();
+    _isLoadingRepliesNotifier.dispose();
+    _showRepliesNotifier.dispose();
+    super.dispose();
   }
 
   @override
@@ -370,87 +383,81 @@ class _PostItemState extends ConsumerState<PostItem> {
 
   /// 切换回复历史显示（点击后先加载，加载完成再显示）
   Future<void> _toggleReplyHistory() async {
-    if (_showReplyHistory) {
-      setState(() => _showReplyHistory = false);
+    if (_showReplyHistoryNotifier.value) {
+      _showReplyHistoryNotifier.value = false;
       return;
     }
 
     // 如果已有数据，直接显示
     if (_replyHistory != null) {
-      setState(() => _showReplyHistory = true);
+      _showReplyHistoryNotifier.value = true;
       return;
     }
 
     // 否则先加载（loading 状态在按钮上显示）
-    if (_isLoadingReplyHistory) return;
+    if (_isLoadingReplyHistoryNotifier.value) return;
 
-    setState(() => _isLoadingReplyHistory = true);
+    _isLoadingReplyHistoryNotifier.value = true;
     try {
       final history = await _service.getPostReplyHistory(widget.post.id);
       if (mounted) {
-        setState(() {
-          _replyHistory = history;
-          _isLoadingReplyHistory = false;
-          _showReplyHistory = true; // 加载完成后直接显示
-        });
+        _replyHistory = history;
+        _isLoadingReplyHistoryNotifier.value = false;
+        _showReplyHistoryNotifier.value = true; // 加载完成后直接显示
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingReplyHistory = false);
+        _isLoadingReplyHistoryNotifier.value = false;
       }
     }
   }
 
   /// 加载回复列表
   Future<void> _loadReplies() async {
-    if (_isLoadingReplies) return;
+    if (_isLoadingRepliesNotifier.value) return;
 
-    setState(() => _isLoadingReplies = true);
+    _isLoadingRepliesNotifier.value = true;
     try {
       final after = _replies.isNotEmpty ? _replies.last.postNumber : 1;
       final replies = await _service.getPostReplies(widget.post.id, after: after);
       if (mounted) {
-        setState(() {
-          _replies.addAll(replies);
-          _isLoadingReplies = false;
-        });
+        _replies.addAll(replies);
+        _isLoadingRepliesNotifier.value = false;
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingReplies = false);
+        _isLoadingRepliesNotifier.value = false;
       }
     }
   }
 
   /// 切换回复列表显示（点击后先加载，加载完成再显示）
   Future<void> _toggleReplies() async {
-    if (_showReplies) {
-      setState(() => _showReplies = false);
+    if (_showRepliesNotifier.value) {
+      _showRepliesNotifier.value = false;
       return;
     }
 
     // 如果已有数据，直接显示
     if (_replies.isNotEmpty) {
-      setState(() => _showReplies = true);
+      _showRepliesNotifier.value = true;
       return;
     }
 
     // 否则先加载（loading 状态在按钮上显示）
-    if (_isLoadingReplies) return;
+    if (_isLoadingRepliesNotifier.value) return;
 
-    setState(() => _isLoadingReplies = true);
+    _isLoadingRepliesNotifier.value = true;
     try {
       final replies = await _service.getPostReplies(widget.post.id, after: 1);
       if (mounted) {
-        setState(() {
-          _replies.addAll(replies);
-          _isLoadingReplies = false;
-          _showReplies = true; // 加载完成后直接显示
-        });
+        _replies.addAll(replies);
+        _isLoadingRepliesNotifier.value = false;
+        _showRepliesNotifier.value = true; // 加载完成后直接显示
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingReplies = false);
+        _isLoadingRepliesNotifier.value = false;
       }
     }
   }
@@ -961,52 +968,57 @@ class _PostItemState extends ConsumerState<PostItem> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (post.replyToUser != null) ...[
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _isLoadingReplyHistory ? null : _toggleReplyHistory,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_isLoadingReplyHistory)
-                              const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            else
-                              Icon(
-                                Icons.reply,
-                                size: 14,
-                                color: theme.colorScheme.primary,
-                              ),
-                            const SizedBox(width: 6),
-                            CircleAvatar(
-                              radius: 10,
-                              backgroundColor: theme.colorScheme.primaryContainer,
-                              backgroundImage: post.replyToUser!.avatarTemplate.isNotEmpty
-                                  ? discourseImageProvider(
-                                      post.replyToUser!.avatarTemplate.startsWith('http')
-                                          ? post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')
-                                          : '${AppConstants.baseUrl}${post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')}',
-                                    )
-                                  : null,
-                              child: post.replyToUser!.avatarTemplate.isEmpty
-                                  ? Text(
-                                      post.replyToUser!.username[0].toUpperCase(),
-                                      style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
-                                    )
-                                  : null,
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _isLoadingReplyHistoryNotifier,
+                      builder: (context, isLoading, _) {
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: isLoading ? null : _toggleReplyHistory,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
                             ),
-                          ],
-                        ),
-                      ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isLoading)
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                else
+                                  Icon(
+                                    Icons.reply,
+                                    size: 14,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                const SizedBox(width: 6),
+                                CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  backgroundImage: post.replyToUser!.avatarTemplate.isNotEmpty
+                                      ? discourseImageProvider(
+                                          post.replyToUser!.avatarTemplate.startsWith('http')
+                                              ? post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')
+                                              : '${AppConstants.baseUrl}${post.replyToUser!.avatarTemplate.replaceAll('{size}', '40')}',
+                                        )
+                                      : null,
+                                  child: post.replyToUser!.avatarTemplate.isEmpty
+                                      ? Text(
+                                          post.replyToUser!.username[0].toUpperCase(),
+                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                                        )
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 12),
                   ],
@@ -1074,8 +1086,13 @@ class _PostItemState extends ConsumerState<PostItem> {
           ),
 
           // 被回复帖子预览（回复历史）
-          if (_showReplyHistory)
-            _buildReplyHistoryPreview(theme),
+          ValueListenableBuilder<bool>(
+            valueListenable: _showReplyHistoryNotifier,
+            builder: (context, showReplyHistory, _) {
+              if (!showReplyHistory) return const SizedBox.shrink();
+              return _buildReplyHistoryPreview(theme);
+            },
+          ),
           
           const SizedBox(height: 12),
 
@@ -1115,61 +1132,71 @@ class _PostItemState extends ConsumerState<PostItem> {
                       children: [
                         // 回复数按钮
                         if (widget.post.replyCount > 0)
-                          GestureDetector(
-                            onTap: _isLoadingReplies ? null : _toggleReplies,
-                            child: Container(
-                              height: 36,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: _showReplies 
-                                    ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: _showReplies 
-                                      ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                                      : Colors.transparent,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (_isLoadingReplies && _replies.isEmpty)
-                                    const SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  else ...[
-                                    Icon(
-                                      Icons.chat_bubble_outline_rounded,
-                                      size: 15,
-                                      color: _showReplies 
-                                          ? theme.colorScheme.primary 
-                                          : theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${widget.post.replyCount}',
-                                      style: theme.textTheme.labelMedium?.copyWith(
-                                        color: _showReplies 
-                                            ? theme.colorScheme.primary 
-                                            : theme.colorScheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.bold,
+                          ValueListenableBuilder<bool>(
+                            valueListenable: _isLoadingRepliesNotifier,
+                            builder: (context, isLoadingReplies, _) {
+                              return ValueListenableBuilder<bool>(
+                                valueListenable: _showRepliesNotifier,
+                                builder: (context, showReplies, _) {
+                                  return GestureDetector(
+                                    onTap: isLoadingReplies ? null : _toggleReplies,
+                                    child: Container(
+                                      height: 36,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: showReplies
+                                            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                                            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: showReplies
+                                              ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (isLoadingReplies && _replies.isEmpty)
+                                            const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          else ...[
+                                            Icon(
+                                              Icons.chat_bubble_outline_rounded,
+                                              size: 15,
+                                              color: showReplies
+                                                  ? theme.colorScheme.primary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              '${widget.post.replyCount}',
+                                              style: theme.textTheme.labelMedium?.copyWith(
+                                                color: showReplies
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Icon(
+                                              showReplies ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                              size: 18,
+                                              color: showReplies
+                                                  ? theme.colorScheme.primary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Icon(
-                                      _showReplies ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                      size: 18,
-                                      color: _showReplies 
-                                          ? theme.colorScheme.primary 
-                                          : theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                                  );
+                                },
+                              );
+                            },
                           ),
 
                         const Spacer(),
@@ -1305,8 +1332,13 @@ class _PostItemState extends ConsumerState<PostItem> {
                     ),
           
                     // 回复列表
-                    if (_showReplies)
-                      _buildRepliesList(theme),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _showRepliesNotifier,
+                      builder: (context, showReplies, _) {
+                        if (!showReplies) return const SizedBox.shrink();
+                        return _buildRepliesList(theme);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -1470,7 +1502,7 @@ class _PostItemState extends ConsumerState<PostItem> {
                 const Spacer(),
                 InkWell(
                   onTap: () {
-                    setState(() => _showReplyHistory = false);
+                    _showReplyHistoryNotifier.value = false;
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
@@ -1667,32 +1699,37 @@ class _PostItemState extends ConsumerState<PostItem> {
           }),
 
           // 底部操作栏
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_canLoadMoreReplies) 
-                TextButton.icon(
-                  onPressed: _isLoadingReplies ? null : _loadReplies,
-                  icon: _isLoadingReplies 
-                    ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)) 
-                    : const Icon(Icons.refresh, size: 16),
-                  label: const Text('加载更多回复'),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
+          ValueListenableBuilder<bool>(
+            valueListenable: _isLoadingRepliesNotifier,
+            builder: (context, isLoadingReplies, _) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_canLoadMoreReplies)
+                    TextButton.icon(
+                      onPressed: isLoadingReplies ? null : _loadReplies,
+                      icon: isLoadingReplies
+                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.refresh, size: 16),
+                      label: const Text('加载更多回复'),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      _showRepliesNotifier.value = false;
+                    },
+                    icon: Icon(Icons.expand_less, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    label: Text('收起回复', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
-                ),
-               const SizedBox(width: 8),
-               TextButton.icon(
-                  onPressed: () {
-                    setState(() => _showReplies = false);
-                  },
-                  icon: Icon(Icons.expand_less, size: 16, color: theme.colorScheme.onSurfaceVariant),
-                  label: Text('收起回复', style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-            ],
+                ],
+              );
+            },
           ),
         ],
       ),

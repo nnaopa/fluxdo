@@ -54,6 +54,12 @@ class TopicScrollController extends ChangeNotifier {
   TopicScrollState _state;
   double _accumulatedScrollDelta = 0;
 
+  /// 底部栏显示状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> showBottomBarNotifier = ValueNotifier<bool>(false);
+
+  /// 定位完成状态 ValueNotifier（用于隔离 UI 更新）
+  final ValueNotifier<bool> isPositionedNotifier = ValueNotifier<bool>(false);
+
   TopicScrollController({
     required this.scrollController,
     this.onScrolled,
@@ -131,11 +137,13 @@ class TopicScrollController extends ChangeNotifier {
       const threshold = 50.0;
       if (_accumulatedScrollDelta < -threshold && !_state.showBottomBar) {
         // 向上滚动超过阈值，显示底部栏
-        _updateState(_state.copyWith(showBottomBar: true));
+        _state = _state.copyWith(showBottomBar: true);
+        showBottomBarNotifier.value = true;
         _accumulatedScrollDelta = 0;
       } else if (_accumulatedScrollDelta > threshold && _state.showBottomBar) {
         // 向下滚动超过阈值，隐藏底部栏
-        _updateState(_state.copyWith(showBottomBar: false));
+        _state = _state.copyWith(showBottomBar: false);
+        showBottomBarNotifier.value = false;
         _accumulatedScrollDelta = 0;
       }
     }
@@ -229,6 +237,7 @@ class TopicScrollController extends ChangeNotifier {
       initialCenterPostNumber: null,
       currentPostNumber: postNumber,
     ));
+    isPositionedNotifier.value = false;
   }
 
   /// 准备刷新
@@ -255,7 +264,8 @@ class TopicScrollController extends ChangeNotifier {
   /// 标记定位完成
   void markPositioned() {
     if (!_state.isPositioned) {
-      _updateState(_state.copyWith(isPositioned: true));
+      _state = _state.copyWith(isPositioned: true);
+      isPositionedNotifier.value = true;
     }
   }
 
@@ -278,10 +288,13 @@ class TopicScrollController extends ChangeNotifier {
       initialCenterPostNumber: anchorPostNumber ?? postNumber,
       currentPostNumber: postNumber,
     ));
+    isPositionedNotifier.value = false;
   }
 
   @override
   void dispose() {
+    showBottomBarNotifier.dispose();
+    isPositionedNotifier.dispose();
     scrollController.dispose();
     super.dispose();
   }

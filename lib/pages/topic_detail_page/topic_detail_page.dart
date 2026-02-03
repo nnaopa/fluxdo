@@ -68,7 +68,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
   bool _isCheckTitleVisibilityScheduled = false;
   bool _isRefreshing = false;
 
-  bool _isOverlayVisible = false;
+  /// 展开头部是否可见（用 ValueNotifier 隔离 UI 更新）
+  final ValueNotifier<bool> _isOverlayVisibleNotifier = ValueNotifier<bool>(false);
   bool _isScrolledUnder = false;
   bool _isSwitchingMode = false;  // 切换热门回复模式
   late final AnimationController _expandController;
@@ -97,9 +98,9 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       curve: Curves.easeOutCubic,
     ))..addStatusListener((status) {
       if (status == AnimationStatus.forward) {
-        setState(() => _isOverlayVisible = true);
+        _isOverlayVisibleNotifier.value = true;
       } else if (status == AnimationStatus.dismissed) {
-        setState(() => _isOverlayVisible = false);
+        _isOverlayVisibleNotifier.value = false;
       }
     });
 
@@ -139,9 +140,6 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     );
 
     _scrollController.scrollController.addListener(_onScroll);
-    _scrollController.addListener(_onScrollStateChanged);
-    _highlightController.addListener(_onHighlightChanged);
-    _visibilityTracker.addListener(_onVisibilityChanged);
   }
 
   @override
@@ -149,10 +147,8 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
     _throttleTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _expandController.dispose();
+    _isOverlayVisibleNotifier.dispose();
     _scrollController.scrollController.removeListener(_onScroll);
-    _scrollController.removeListener(_onScrollStateChanged);
-    _highlightController.removeListener(_onHighlightChanged);
-    _visibilityTracker.removeListener(_onVisibilityChanged);
     _screenTrack.stop();
     _scrollController.dispose();
     _highlightController.dispose();
@@ -164,18 +160,6 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final hasFocus = state == AppLifecycleState.resumed;
     _screenTrack.setHasFocus(hasFocus);
-  }
-
-  void _onScrollStateChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _onHighlightChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _onVisibilityChanged() {
-    if (mounted) setState(() {});
   }
 
   void _scheduleCheckTitleVisibility() {
@@ -1183,69 +1167,90 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
         children: [
           content,
           
-          // TopicDetailOverlay (Bottom Bar) - 应该在 Header 下面还是上面？
-          // 原有实现是 Stack 覆盖在 content 上。
+          // TopicDetailOverlay (Bottom Bar)
+          // 使用 ValueListenableBuilder 隔离状态变化，避免整页重建
           if (detail != null)
-            TopicDetailOverlay(
-              showBottomBar: _scrollController.showBottomBar,
-              isLoggedIn: isLoggedIn,
-              currentStreamIndex: _visibilityTracker.currentVisibleStreamIndex,
-              totalCount: detail.postStream.stream.length,
-              detail: detail,
-              onScrollToTop: _scrollToTop,
-              onShare: _shareTopic,
-              onOpenInBrowser: _openInBrowser,
-              onReply: () => _handleReply(null),
-              onProgressTap: () => _showTimelineSheet(detail),
-              isSummaryMode: notifier.isSummaryMode,
-              isAuthorOnlyMode: notifier.isAuthorOnlyMode,
-              isLoading: _isSwitchingMode,
-              onShowTopReplies: _handleShowTopReplies,
-              onShowAuthorOnly: _handleShowAuthorOnly,
-              onCancelFilter: _handleCancelFilter,
+            ValueListenableBuilder<bool>(
+              valueListenable: _scrollController.showBottomBarNotifier,
+              builder: (context, showBottomBar, _) {
+                return ValueListenableBuilder<int>(
+                  valueListenable: _visibilityTracker.streamIndexNotifier,
+                  builder: (context, currentStreamIndex, _) {
+                    return TopicDetailOverlay(
+                      showBottomBar: showBottomBar,
+                      isLoggedIn: isLoggedIn,
+                      currentStreamIndex: currentStreamIndex,
+                      totalCount: detail.postStream.stream.length,
+                      detail: detail,
+                      onScrollToTop: _scrollToTop,
+                      onShare: _shareTopic,
+                      onOpenInBrowser: _openInBrowser,
+                      onReply: () => _handleReply(null),
+                      onProgressTap: () => _showTimelineSheet(detail),
+                      isSummaryMode: notifier.isSummaryMode,
+                      isAuthorOnlyMode: notifier.isAuthorOnlyMode,
+                      isLoading: _isSwitchingMode,
+                      onShowTopReplies: _handleShowTopReplies,
+                      onShowAuthorOnly: _handleShowAuthorOnly,
+                      onCancelFilter: _handleCancelFilter,
+                    );
+                  },
+                );
+              },
             ),
 
-          // Expanded Header Barrier
-          if (_isOverlayVisible)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: _toggleExpandedHeader,
-                child: FadeTransition(
-                  opacity: _expandController,
-                  child: Container(color: Colors.black54),
-                ),
-              ),
-            ),
+          // Expanded Header 相关组件（使用 ValueListenableBuilder 隔离状态变化）
+          ValueListenableBuilder<bool>(
+            valueListenable: _isOverlayVisibleNotifier,
+            builder: (context, isOverlayVisible, _) {
+              if (!isOverlayVisible) return const SizedBox.shrink();
 
-          // Expanded Header
-          if (_isOverlayVisible && detail != null)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SlideTransition(
-                position: _animation,
-                child: Container(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.7,
-                  ),
-                  child: Material(
-                    color: Theme.of(context).colorScheme.surface,
-                    elevation: 0,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                    clipBehavior: Clip.antiAlias,
-                    child: SingleChildScrollView(
-                      child: TopicDetailHeader(
-                        detail: detail,
-                        headerKey: null,
-                        onVoteChanged: _handleVoteChanged,
-                        onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
+              return Stack(
+                children: [
+                  // Expanded Header Barrier
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: _toggleExpandedHeader,
+                      child: FadeTransition(
+                        opacity: _expandController,
+                        child: Container(color: Colors.black54),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
+
+                  // Expanded Header
+                  if (detail != null)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: SlideTransition(
+                        position: _animation,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxHeight: MediaQuery.of(context).size.height * 0.7,
+                          ),
+                          child: Material(
+                            color: Theme.of(context).colorScheme.surface,
+                            elevation: 0,
+                            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                            clipBehavior: Clip.antiAlias,
+                            child: SingleChildScrollView(
+                              child: TopicDetailHeader(
+                                detail: detail,
+                                headerKey: null,
+                                onVoteChanged: _handleVoteChanged,
+                                onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
       );
   }
@@ -1303,29 +1308,35 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
 
     final centerPostIndex = _scrollController.findCenterPostIndex(posts);
 
-    Widget scrollView = TopicPostList(
-      detail: detail,
-      scrollController: _scrollController.scrollController,
-      centerKey: _centerKey,
-      headerKey: _headerKey,
-      highlightPostNumber: _highlightController.highlightPostNumber,
-      typingUsers: typingUsers,
-      isLoggedIn: isLoggedIn,
-      hasMoreBefore: notifier.hasMoreBefore,
-      hasMoreAfter: notifier.hasMoreAfter,
-      isLoadingPrevious: notifier.isLoadingPrevious,
-      isLoadingMore: notifier.isLoadingMore,
-      centerPostIndex: centerPostIndex,
-      dividerPostIndex: dividerPostIndex,
-      onPostVisibilityChanged: _visibilityTracker.onPostVisibilityChanged,
-      onJumpToPost: _scrollToPost,
-      onReply: _handleReply,
-      onEdit: _handleEdit,
-      onRefreshPost: _handleRefreshPost,
-      onVoteChanged: _handleVoteChanged,
-      onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
-      onSolutionChanged: _handleSolutionChanged,
-      onScrollNotification: _scrollController.handleScrollNotification,
+    // 使用 ValueListenableBuilder 隔离高亮状态变化，避免整页重建
+    Widget scrollView = ValueListenableBuilder<int?>(
+      valueListenable: _highlightController.highlightNotifier,
+      builder: (context, highlightPostNumber, _) {
+        return TopicPostList(
+          detail: detail,
+          scrollController: _scrollController.scrollController,
+          centerKey: _centerKey,
+          headerKey: _headerKey,
+          highlightPostNumber: highlightPostNumber,
+          typingUsers: typingUsers,
+          isLoggedIn: isLoggedIn,
+          hasMoreBefore: notifier.hasMoreBefore,
+          hasMoreAfter: notifier.hasMoreAfter,
+          isLoadingPrevious: notifier.isLoadingPrevious,
+          isLoadingMore: notifier.isLoadingMore,
+          centerPostIndex: centerPostIndex,
+          dividerPostIndex: dividerPostIndex,
+          onPostVisibilityChanged: _visibilityTracker.onPostVisibilityChanged,
+          onJumpToPost: _scrollToPost,
+          onReply: _handleReply,
+          onEdit: _handleEdit,
+          onRefreshPost: _handleRefreshPost,
+          onVoteChanged: _handleVoteChanged,
+          onNotificationLevelChanged: (level) => _handleNotificationLevelChanged(notifier, level),
+          onSolutionChanged: _handleSolutionChanged,
+          onScrollNotification: _scrollController.handleScrollNotification,
+        );
+      },
     );
 
     scrollView = RefreshIndicator(
@@ -1338,8 +1349,16 @@ class _TopicDetailPageState extends ConsumerState<TopicDetailPage> with WidgetsB
       child: scrollView,
     );
 
-    return Opacity(
-      opacity: _scrollController.isPositioned ? 1.0 : 0.0,
+    // 使用 ValueListenableBuilder 隔离定位状态变化，避免整页重建
+    // 使用 child 参数避免 scrollView 重建
+    return ValueListenableBuilder<bool>(
+      valueListenable: _scrollController.isPositionedNotifier,
+      builder: (context, isPositioned, child) {
+        return Opacity(
+          opacity: isPositioned ? 1.0 : 0.0,
+          child: child,
+        );
+      },
       child: scrollView,
     );
 
